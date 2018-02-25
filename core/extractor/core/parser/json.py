@@ -1,12 +1,11 @@
 import json 
-
-
+from .utils.json import create_logger
 
 class JSONParser:
     """ Custom json parsing utility to handle labelbox.io extraction file. """
 
-    def __init__(self, json_file):
-        self._logger = set_logger(__name__)
+    def __init__(self, json_file, logger):
+        self._logger = create_logger(__name__)
         self._json_file = json_file
         
     def _extract_json_from_file(self):

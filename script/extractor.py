@@ -2,13 +2,16 @@ import argparse
 import json
 import os
 
-from .core.extractor.extractor import Extractor
+from core.extractor.extractor import Extractor
+from utils.logger import create_logger
+
 
 class Main():
     """ Script: Tranform extracted json from labelbox.io  to python objects."""
 
     def __init__(self):
         self.main()
+
 
     def parse_args(self):
         """ Parse args passed on while calling the script. """
@@ -30,7 +33,9 @@ class Main():
     def main(self):
         """ Application main method. """
         result = self.parse_args()
-        extractor = Extractor(result)   
+        extractor = Extractor(logger=create_logger, 
+                              json_file=result.json_file_path,
+                              output_path=result.output_path)   
 
             
             

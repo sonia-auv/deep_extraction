@@ -40,6 +40,9 @@ class Extractor:
     def _extract_labels_from_json(self, logger):
         json_parser = JSONParser(self._json_file, logger)
 
+    
+    #TODO: Need to get access
+
 
 
 

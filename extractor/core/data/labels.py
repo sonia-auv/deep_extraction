@@ -6,4 +6,16 @@ class Label:
         self.name = name
         self.wkt_polygon = polygon
 
+    def __repr__(self):
+        return (f'{self.__class__.__name__}('
+                f'{self.name!r}, {self.wkt_polygon!r})')
+    
+    def __str__(self):
+        return f'A label named {self.name}'
+
+    
+    #TODO: Complete conversion to pascal voc 
+    #TODO: Complete conversion to mscoco
+    
+
     

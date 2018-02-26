@@ -13,6 +13,15 @@ class Extractor:
         self._prepare_output_path()
         self._extract_labels_from_json(logger)
 
+
+    def __repr__(self):
+        return (f'{self.__class__.__name__}('
+                f'{self._json_file!r}, {self._output_path!r}, )')
+    
+    def __str__(self):
+        return f'An labebox.io object extractor with output path {self._output_path}'
+
+
     def _prepare_output_path(self):
         """ Prepare output folder to receive images and bounding box data. """
         

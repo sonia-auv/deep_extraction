@@ -13,6 +13,17 @@ class LabeledImage:
         self.created_by = kwargs['Created By']
         self.project_name = kwargs['Project Name']
         self.seconds_to_label = kwargs['Seconds to Label']
+    
+
+    def __repr__(self):
+        return (f'{self.__class__.__name__}('
+                f'{self.logger!r}, '
+                f'{self.id!r}, {self.source_img_url!r}, '
+                f'{self.labels!r}, {self.created_by!r}, '
+                f'{self.project_name!r}, {self.seconds_to_label})')
+    
+    def __str__(self):
+        return f'A LabeledImage object from image {self.source_img_url} with id : {self.id}'
 
     def parse_labels(self, json_labels):
         """ Parse json labels and generate custom label object. """

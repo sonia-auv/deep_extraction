@@ -9,11 +9,10 @@ class LabeledImage:
         self.logger = logger(__name__)
         self.id = kwargs['ID']
         self.source_img_url = kwargs['Labeled Data']
-        self.labels = self.parse_labels(kwargs['Label'])
         self.created_by = kwargs['Created By']
         self.project_name = kwargs['Project Name']
         self.seconds_to_label = kwargs['Seconds to Label']
-    
+        self.labels = self.parse_labels(kwargs['Label'])    
 
     def __repr__(self):
         return (f'{self.__class__.__name__}('
@@ -28,6 +27,7 @@ class LabeledImage:
     def parse_labels(self, json_labels):
         """ Parse json labels and generate custom label object. """
         labels = []
+        errored_labels = []
 
         for name , polygon in json_labels.items():
             
@@ -37,6 +37,10 @@ class LabeledImage:
                 label = Label(name, wtk_polygon)
                 labels.append(label)
             except :
+               msg = f'ID:{self.id}, {self.created_by}'
+               print(msg)
+               errored_labels.append(msg)
                self.logger.warn('Skipping label : Polygon point count < 4 ')
 
-        return labels
+
+        return labels, errored_labels

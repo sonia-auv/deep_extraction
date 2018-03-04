@@ -35,7 +35,52 @@ class JSONParser:
             image = LabeledImage(logger, **entry)
             labeled_imgs.append(image)
         
-            
+        import IPython;IPython.embed()
+        
 
+from abc import ABCMeta, abstractmethod    
+class AbstractLabelETL:
+    """ 
+    A utility class for label extraction transformation and load (ETL) .
+    
+    Provides way to extract labelbox.io data an transform it 
+    to transform data to meet multiple deep-learning framework needs.
+    """ 
 
+    def __init__(self, labeled_images):
+        self._labeled_images = labeled_images
+    
+    @abstractmethod
+    def create_label_map(self):
+        pass
+    
+    @abstractmethod
+    def prepare_annotation(self):
+        pass
+
+class ETLTensorflow(AbstractLabelETL):
+    LABEL_MAP_FILE_NAME = 'label_map.pbtxt'
+
+    def __init__(self, labeled_images):
+        super().__init__(labeled_images)
+    
+
+    def __repr__(self):
+        return (f'{self.__class__.__name__}('
+                f'{self._labeled_images!r})') 
+
+    def __str__(self):
+        return (f'An label utility class to extract transform and lood' 
+                f'labeled in tensorflow object detection required format')       
+
+    def create_label_map(self):
+        #TODO: Continue here
+        #labels = [label.labels for item in self.labeled_images]
+
+        labels = []
+        for label in self:
+            labels.extend(label.labels)
+
+        label_names = {label.name for label in labels}     
+    
         

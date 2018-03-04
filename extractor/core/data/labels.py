@@ -13,9 +13,9 @@ class Label:
     def __str__(self):
         return f'A label named {self.name}'
 
-    
+    #TODO: Darknet pascal voc
     #TODO: Complete conversion to pascal voc 
     #TODO: Complete conversion to mscoco
-    
+
 
     

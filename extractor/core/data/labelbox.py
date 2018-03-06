@@ -39,21 +39,26 @@ class LabeledImage:
         return f'A LabeledImage object from image {self._source_img_url} with id : {self._id}'
     def _download_image(self):
         """ Download image from provided link (Cloud link)."""
-        try:
-            response = requests.get(self._source_img_url, stream=True)
-        except requests.exceptions.MissingSchema as e:
-            self._logger.exception('"source_image_url" attribute must be a URL.')
-        except requests.exceptions.ConnectionError as e:
-            self._logger.exception(f'Failed to fetch image from {self._source_img_url}.')
-        
-        response.raw.decode_content = True
-        
-        im = Image.open(response.raw)
-        image_name = f'{self._file_name}.jpg'
-        self._image_file_path = os.path.join(self._images_dir, image_name)
-        im.save(self._image_file_path, format=im.format)
-        self._img_width , self._img_height = im.size
-        self._logger.info(f'Downloaded image form source {self._source_img_url} at {self._image_file_path}')
+        file_path = os.path.join(self._images_dir, f'{self._file_name}.jpg')
+
+        if not os.path.exists(file_path):
+            try:
+                response = requests.get(self._source_img_url, stream=True)
+            except requests.exceptions.MissingSchema as e:
+                self._logger.exception('"source_image_url" attribute must be a URL.')
+            except requests.exceptions.ConnectionError as e:
+                self._logger.exception(f'Failed to fetch image from {self._source_img_url}.')
+            
+            response.raw.decode_content = True
+            
+            im = Image.open(response.raw)
+            image_name = f'{self._file_name}.jpg'
+            self._image_file_path = os.path.join(self._images_dir, image_name)
+            im.save(self._image_file_path, format=im.format)
+            self._img_width , self._img_height = im.size
+            self._logger.info(f'Downloaded image form source {self._source_img_url} at {self._image_file_path}')
+        else:
+            self._logger.warn(f'WARN: Skipping file download since it already exist @ {file_path}')
 
     def _generate_annotations(self):
         """ Handle different annotation type. """

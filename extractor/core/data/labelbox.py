@@ -103,8 +103,85 @@ class LabeledImage:
         self._logger.info(f'Pascal VOC annotation file create for image {self._file_name}.')
 
 
-    def _generate_coco_file(self, json_labels):
+    def _generate_coco_file(self, json_labels, apply_resizing_factor=True):
         """ Transform WKT polygon to coco format. """
-        raise NotImplementedError('To be implemented')
+        #TODO: Refactor and test
+        # setup COCO dataset container and info
+        coco = {
+            'info': None,
+            'images': [],
+            'annotations': [],
+            'licenses': [],
+            'categories': []
+        }
+
+        coco['info'] = {
+            'year': dt.datetime.now(dt.timezone.utc).year,
+            'version': None,
+            'description': self._project_name,
+            'contributor': self._created_by,
+            'url': 'labelbox.io',
+            'date_created': dt.datetime.now(dt.timezone.utc).isoformat()
+        }
+
+        image = {
+            "id": self._id,
+            "width": self.width,
+            "height": self.height,
+            "file_name": self._file_name,
+            "license": None,
+            "flickr_url": self._source_img_url,
+            "coco_url": self._source_img_url,
+            "date_captured": None,
+        }
+
+        coco['images'].append(image)
+
+        for label_name, polygon in json_labels.items():
+             try:
+                # check if label category exists in 'categories' field
+                label_id = [c['id'] for c in coco['categories']
+                          if c['supercategory'] == label_name][0]
+            except IndexError as e:
+                label_id = len(coco['categories']) + 1
+                category = {
+                    'supercategory': label,
+                    'id': len(coco['categories']) + 1,
+                    'name': label
+                }
+                coco['categories'].append(category)
+            
+            multipolygon = wkt.loads(polygon)
+            for m in multipolygon:
+                segmentation = []
+                for x, y in m.exterior.coords:
+
+                    if apply_reduction:
+                        #TODO:Complete data conversion according to model input size
+                        #x_factor = x / self._required_img_width
+                        #y_factor = y / self._required_img_height
+
+                        #new_x = x / x_factor
+                        #new_y = y / y_factor
+                        #segmentation.extend([new_x, height-new_y])
+                    else:
+                        segmentation.extend([x, height-y])
+                
+                annotation = {
+                    "id": len(coco['annotations']) + 1,
+                    "image_id": self._id,
+                    "category_id": label_id,
+                    "segmentation": [segmentation],
+                    "area": m.area,  # float
+                    "bbox": [m.bounds[0], m.bounds[1],
+                             m.bounds[2]-m.bounds[0],
+                             m.bounds[3]-m.bounds[1]],
+                    "iscrowd": 0
+                }
+
+                coco['annotations'].append(annotation)
+
+        with open(coco_output, 'w+') as coco_file:
+            coco_file.write(json.dumps(coco))
 
 

@@ -5,9 +5,14 @@ from extractor.core.data.labelbox import LabeledImage
 class JSONParser:
     """ Custom json parsing utility to handle labelbox.io extraction file. """
 
-    def __init__(self, json_file, logger):
+    def __init__(self, logger, *args, **kwargs):
         self._logger = logger(__name__)
-        self._json_file = json_file
+        self._json_file = kwargs['json_file']
+        self._images_dir = kwargs['images_dir']
+        self._annotations_dir = kwargs['annotations_dir']
+        self._required_img_width = kwargs['required_img_width']
+        self._required_img_height = kwargs['required_img_height']
+        self._annotation_type = kwargs['annotation_type']
 
         self._extract_json_from_file()
         self.parse_extracted_data_to_object(logger)
@@ -32,55 +37,11 @@ class JSONParser:
         self._logger.info('Parsing extracted data to generate custom object.')
         labeled_imgs = []
         for entry in self._json_data:
+            entry['Images Dir'] = self._images_dir
+            entry['Annotations Dir'] = self._annotations_dir
+            entry['Required Image Width'] = self._required_img_width
+            entry['Required Image Height'] = self._required_img_height
+            entry['Annotation Type'] = self._annotation_type
             image = LabeledImage(logger, **entry)
             labeled_imgs.append(image)
-        
-        import IPython;IPython.embed()
-        
-
-from abc import ABCMeta, abstractmethod    
-class AbstractLabelETL:
-    """ 
-    A utility class for label extraction transformation and load (ETL) .
-    
-    Provides way to extract labelbox.io data an transform it 
-    to transform data to meet multiple deep-learning framework needs.
-    """ 
-
-    def __init__(self, labeled_images):
-        self._labeled_images = labeled_images
-    
-    @abstractmethod
-    def create_label_map(self):
-        pass
-    
-    @abstractmethod
-    def prepare_annotation(self):
-        pass
-
-class ETLTensorflow(AbstractLabelETL):
-    LABEL_MAP_FILE_NAME = 'label_map.pbtxt'
-
-    def __init__(self, labeled_images):
-        super().__init__(labeled_images)
-    
-
-    def __repr__(self):
-        return (f'{self.__class__.__name__}('
-                f'{self._labeled_images!r})') 
-
-    def __str__(self):
-        return (f'An label utility class to extract transform and lood' 
-                f'labeled in tensorflow object detection required format')       
-
-    def create_label_map(self):
-        #TODO: Continue here
-        #labels = [label.labels for item in self.labeled_images]
-
-        labels = []
-        for label in self:
-            labels.extend(label.labels)
-
-        label_names = {label.name for label in labels}     
-    
         

@@ -9,6 +9,9 @@ class Extractor:
         self._logger = logger(__name__)
         self._json_file = kwargs['json_file']
         self._output_path = kwargs['output_path']
+        self._required_img_width = kwargs['required_img_width']
+        self._required_img_height = kwargs['required_img_height']
+        self._annotation_type = kwargs['annotation_type']
 
         self._prepare_output_path()
         self._extract_labels_from_json(logger)
@@ -26,7 +29,7 @@ class Extractor:
         """ Prepare output folder to receive images and bounding box data. """
         
         self._image_dir = os.path.join(self._output_path, 'images')
-        self._bounding_box_dir = os.path.join(self._output_path, 'bouding_box')
+        self._annotation_dir = os.path.join(self._output_path, 'annotations')
         
         if not os.path.exists(self._output_path):
             os.makedirs(self._output_path)
@@ -34,14 +37,21 @@ class Extractor:
         if not os.path.exists(self._image_dir):
             os.makedirs(self._image_dir)
 
-        if not os.path.exists(self._bounding_box_dir):
-            os.makedirs(self._bounding_box_dir)
+        if not os.path.exists(self._annotation_dir):
+            os.makedirs(self._annotation_dir)
 
     def _extract_labels_from_json(self, logger):
-        json_parser = JSONParser(self._json_file, logger)
 
-    
-    #TODO: Need to get access
+        config ={
+            'json_file': self._json_file,
+            'images_dir': self._image_dir,
+            'annotations_dir': self._annotation_dir,
+            'required_img_width': self._required_img_width,
+            'required_img_height': self._required_img_height,
+            'annotation_type': self._annotation_type
+        }
+
+        json_parser = JSONParser(logger, **config)
 
 
 

@@ -26,6 +26,8 @@ class LabeledImage:
         self._annotation_type = kwargs['Annotation Type']
         self._file_name = self._source_img_url.rsplit('/', 1)[-1]
         self._download_image(kwargs['Label'])
+        self._generate_annotations(kwargs['Label'])
+       
        
     
     def __repr__(self):
@@ -37,30 +39,29 @@ class LabeledImage:
     
     def __str__(self):
         return f'A LabeledImage object from image {self._source_img_url} with id : {self._id}'
+
     def _download_image(self, json_labels):
         """ Download image from provided link (Cloud link)."""
-        file_path = os.path.join(self._images_dir, f'{self._file_name}.jpg')
+        file_path = os.path.join(self._images_dir, self._file_name)
 
         if not os.path.exists(file_path):
             try:
                 response = requests.get(self._source_img_url, stream=True)
+                response.raw.decode_content = True
+                im = Image.open(response.raw)
+                file_path = os.path.join(self._images_dir, self._file_name)
+                self._image_file_path = os.path.join(file_path, im.format)
+                im.save(file_path, format=im.format)
+                self._img_width , self._img_height = im.size
+                self._logger.info(f'Downloaded image form source {self._source_img_url} at {file_path}')
             except requests.exceptions.MissingSchema as e:
                 self._logger.exception('"source_image_url" attribute must be a URL.')
             except requests.exceptions.ConnectionError as e:
                 self._logger.exception(f'Failed to fetch image from {self._source_img_url}.')
-            
-            response.raw.decode_content = True
-            
-            im = Image.open(response.raw)
-            
-            file_path = os.path.join(self._images_dir, self._file_name)
-            self._image_file_path = os.path.join(file_path, im.format)
-            im.save(file_path, format=im.format)
-            self._img_width , self._img_height = im.size
-            self._logger.info(f'Downloaded image form source {self._source_img_url} at {file_path}')
-            self._generate_annotations(json_labels)
         else:
-            self._logger.warn(f'WARN: Skipping file download since it already exist @ {file_path}')
+            im = Image.open(file_path)
+            self._img_width, self._img_height = im.size
+            self._logger.warn(f'WARN: Skipping file download since it already exist @ {file_path}\n')
 
         
     def _generate_annotations(self, json_labels):
@@ -77,7 +78,7 @@ class LabeledImage:
 
     def _generate_pascal_voc_file(self, json_labels, apply_reduction=False):
         """ Transform WKT polygon to pascal voc. """
-        self._logger.info(f'Transforming shapely wtk polygon format to pascal voc.')
+        self._logger.info(f'Transforming shapely wtk polygon format to pascal voc.\n')
         xml_writer = PascalWriter(self._image_file_path, self._img_width, self._img_height)
 
         for label, polygon in json_labels.items():
@@ -102,10 +103,14 @@ class LabeledImage:
                     xy_coords = xy_coords[:-2]
                 
                 xml_writer.addObject(name=label.lower(), xy_coords=xy_coords)
+        
+        xml_file_path = os.path.join(self._annotations_dir, f'{self._file_name}.xml')
 
-        xml_writer.save(os.path.join(self._annotations_dir, f'{self._file_name}.xml'))
-        self._logger.info(f'Pascal VOC annotation file create for image {self._file_name}.')
-
+        if not os.path.exists(xml_file_path):
+            xml_writer.save(xml_file_path)
+            self._logger.info(f'Pascal VOC annotation file create for image {self._file_name}.\n\n')
+        else:
+            self._logger.info(f'WARN: Skipping file creation since it already exist at {xml_file_path}\n')
 
     def _generate_coco_file(self, json_labels, apply_reduction=True):
         """ Transform WKT polygon to coco format. """
@@ -184,8 +189,13 @@ class LabeledImage:
                 coco['annotations'].append(annotation)
 
         file_name = self._file_name.rsplit('.', 1)[0]
-        coco_output = os.path.join(self._annotations_dir, f'{file_name}.json')
-        with open(coco_output, 'w+') as coco_file:
+        annotation_file = os.path.join(self._annotations_dir, f'{file_name}.json')
+        
+    
+        with open(annotation_file, 'w+') as coco_file:
             coco_file.write(json.dumps(coco))
+        
+        self._logger.info(f'Coco annotation file has been created at {str(annotation_file)}\n')
+
 
 

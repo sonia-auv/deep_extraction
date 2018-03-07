@@ -2,6 +2,7 @@ import datetime as dt
 import os
 import json
 import requests
+#import cv2
 from PIL import Image
 from shapely import wkt
 from pascal_voc_writer import Writer as PascalWriter
@@ -20,6 +21,7 @@ class LabeledImage:
         self._project_name = kwargs['Project Name']
         self._seconds_to_label = kwargs['Seconds to Label']
         self._images_dir = kwargs['Images Dir']
+        self._resized_image_dir = kwargs['Resized Image Dir']
         self._annotations_dir = kwargs['Annotations Dir']
         self._required_img_height = kwargs['Required Image Height']
         self._required_img_width = kwargs['Required Image Width']
@@ -29,7 +31,6 @@ class LabeledImage:
         self._generate_annotations(kwargs['Label'])
        
        
-    
     def __repr__(self):
         return (f'{self.__class__.__name__}('
                 f'{self._logger!r}, '
@@ -49,6 +50,7 @@ class LabeledImage:
                 response = requests.get(self._source_img_url, stream=True)
                 response.raw.decode_content = True
                 im = Image.open(response.raw)
+                self._resize_image(im)
                 file_path = os.path.join(self._images_dir, self._file_name)
                 self._image_file_path = os.path.join(file_path, im.format)
                 im.save(file_path, format=im.format)
@@ -62,6 +64,19 @@ class LabeledImage:
             im = Image.open(file_path)
             self._img_width, self._img_height = im.size
             self._logger.warn(f'WARN: Skipping file download since it already exist @ {file_path}\n')
+    
+    def _resize_image(self, image):
+        """ Resize downloaded image to fit neural network requirements. """
+        file_path = os.path.join(self._resized_image_dir, self._file_name)
+        if not os.path.exists(file_path): 
+            img = cv2.resize(image, (self._required_img_width, self._required_img_height))
+            img.save(file_path, format=image.format)
+            
+            self._logger.info(f'Resized image at {file_path}.jpg')
+        else:
+             self._logger.warn(f'WARN: Skipping file resizing since it already exist @ {file_path}\n')
+
+
 
         
     def _generate_annotations(self, json_labels):

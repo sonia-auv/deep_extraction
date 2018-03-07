@@ -9,6 +9,7 @@ class JSONParser:
         self._logger = logger(__name__)
         self._json_file = kwargs['json_file']
         self._images_dir = kwargs['images_dir']
+        self._resized_dir = kwargs['resize_dir']
         self._annotations_dir = kwargs['annotations_dir']
         self._required_img_width = kwargs['required_img_width']
         self._required_img_height = kwargs['required_img_height']
@@ -42,6 +43,7 @@ class JSONParser:
             entry['Required Image Width'] = self._required_img_width
             entry['Required Image Height'] = self._required_img_height
             entry['Annotation Type'] = self._annotation_type
+            entry['Resized Image Dir'] = self._resized_dir
             image = LabeledImage(logger, **entry)
             labeled_imgs.append(image)
         

@@ -30,6 +30,7 @@ class Extractor:
         
         self._image_dir = os.path.join(self._output_path, 'images')
         self._annotation_dir = os.path.join(self._output_path, 'annotations')
+        self._resized_dir = os.path.join(self._output_path, 'resized')
         
         if not os.path.exists(self._output_path):
             os.makedirs(self._output_path)
@@ -40,11 +41,15 @@ class Extractor:
         if not os.path.exists(self._annotation_dir):
             os.makedirs(self._annotation_dir)
 
+        if not os.path.exists(self._resized_dir):
+            os.makedirs(self._resized_dir)
+
     def _extract_labels_from_json(self, logger):
 
         config ={
             'json_file': self._json_file,
             'images_dir': self._image_dir,
+            'resize_dir': self._resized_dir,
             'annotations_dir': self._annotation_dir,
             'required_img_width': self._required_img_width,
             'required_img_height': self._required_img_height,

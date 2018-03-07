@@ -1,4 +1,6 @@
+import datetime as dt
 import os
+import json
 import requests
 from PIL import Image
 from shapely import wkt
@@ -23,11 +25,9 @@ class LabeledImage:
         self._required_img_width = kwargs['Required Image Width']
         self._annotation_type = kwargs['Annotation Type']
         self._file_name = self._source_img_url.rsplit('/', 1)[-1]
-        self._download_image()
-        self._generate_annotations()
+        self._download_image(kwargs['Label'])
+       
     
-    
-
     def __repr__(self):
         return (f'{self.__class__.__name__}('
                 f'{self._logger!r}, '
@@ -37,7 +37,7 @@ class LabeledImage:
     
     def __str__(self):
         return f'A LabeledImage object from image {self._source_img_url} with id : {self._id}'
-    def _download_image(self):
+    def _download_image(self, json_labels):
         """ Download image from provided link (Cloud link)."""
         file_path = os.path.join(self._images_dir, f'{self._file_name}.jpg')
 
@@ -52,20 +52,24 @@ class LabeledImage:
             response.raw.decode_content = True
             
             im = Image.open(response.raw)
-            image_name = f'{self._file_name}.jpg'
-            self._image_file_path = os.path.join(self._images_dir, image_name)
-            im.save(self._image_file_path, format=im.format)
+            
+            file_path = os.path.join(self._images_dir, self._file_name)
+            self._image_file_path = os.path.join(file_path, im.format)
+            im.save(file_path, format=im.format)
             self._img_width , self._img_height = im.size
-            self._logger.info(f'Downloaded image form source {self._source_img_url} at {self._image_file_path}')
+            self._logger.info(f'Downloaded image form source {self._source_img_url} at {file_path}')
+            self._generate_annotations(json_labels)
         else:
             self._logger.warn(f'WARN: Skipping file download since it already exist @ {file_path}')
 
-    def _generate_annotations(self):
+        
+    def _generate_annotations(self, json_labels):
         """ Handle different annotation type. """
-        if self._annotation_type == ANNOTATION_PASCAL_VOC:  
-            self._generate_pascal_voc_file(kwargs['Label'])  
-        elif self._annotation_type == ANNOTATION_COCO:
-            self._generate_coco_file()
+        if self._annotation_type == self.ANNOTATION_PASCAL_VOC:  
+            self._generate_pascal_voc_file(json_labels, apply_reduction=True)  
+        elif self._annotation_type == self.ANNOTATION_COCO:
+            pass
+            self._generate_coco_file(json_labels, apply_reduction=True)
         else:
             self._logger.error(f'Unknown annotation type : {self._annotation_type}')
             raise ValueError()
@@ -81,15 +85,15 @@ class LabeledImage:
             for m in multipolygon:
                 xy_coords = []
                 for x, y in m.exterior.coords:
-                    
                     if apply_reduction:
-                        #TODO:Complete data conversion according to model input size
-                        #x_factor = x / self._required_img_width
-                        #y_factor = y / self._required_img_height
+                        x_factor = self._img_width / self._required_img_width
+                        y_factor = self._img_height / self._required_img_height
 
-                        #new_x = x / x_factor
-                        #new_y = y / y_factor
-                        #xy_coords.extend([new_x, self._img_height-new_y])
+                        new_x = x / x_factor
+                        new_y = y / y_factor
+                        resized_height = self._img_height / y_factor
+                        
+                        xy_coords.extend([new_x, resized_height-new_y])
                     else:
                         xy_coords.extend([x, self._img_height-y])
             
@@ -103,10 +107,8 @@ class LabeledImage:
         self._logger.info(f'Pascal VOC annotation file create for image {self._file_name}.')
 
 
-    def _generate_coco_file(self, json_labels, apply_resizing_factor=True):
+    def _generate_coco_file(self, json_labels, apply_reduction=True):
         """ Transform WKT polygon to coco format. """
-        #TODO: Refactor and test
-        # setup COCO dataset container and info
         coco = {
             'info': None,
             'images': [],
@@ -126,8 +128,8 @@ class LabeledImage:
 
         image = {
             "id": self._id,
-            "width": self.width,
-            "height": self.height,
+            "width": self._img_width,
+            "height": self._img_height,
             "file_name": self._file_name,
             "license": None,
             "flickr_url": self._source_img_url,
@@ -138,16 +140,16 @@ class LabeledImage:
         coco['images'].append(image)
 
         for label_name, polygon in json_labels.items():
-             try:
+            try:
                 # check if label category exists in 'categories' field
                 label_id = [c['id'] for c in coco['categories']
                           if c['supercategory'] == label_name][0]
             except IndexError as e:
                 label_id = len(coco['categories']) + 1
                 category = {
-                    'supercategory': label,
+                    'supercategory': label_name,
                     'id': len(coco['categories']) + 1,
-                    'name': label
+                    'name': label_name
                 }
                 coco['categories'].append(category)
             
@@ -155,17 +157,17 @@ class LabeledImage:
             for m in multipolygon:
                 segmentation = []
                 for x, y in m.exterior.coords:
-
                     if apply_reduction:
-                        #TODO:Complete data conversion according to model input size
-                        #x_factor = x / self._required_img_width
-                        #y_factor = y / self._required_img_height
+                        x_factor = self._img_width / self._required_img_width
+                        y_factor = self._img_height / self._required_img_height
 
-                        #new_x = x / x_factor
-                        #new_y = y / y_factor
-                        #segmentation.extend([new_x, height-new_y])
+                        new_x = x / x_factor
+                        new_y = y / y_factor
+                        resized_height = self._img_height / y_factor
+
+                        segmentation.extend([new_x, resized_height-new_y])
                     else:
-                        segmentation.extend([x, height-y])
+                        segmentation.extend([x, self._img_height-y])
                 
                 annotation = {
                     "id": len(coco['annotations']) + 1,
@@ -181,6 +183,8 @@ class LabeledImage:
 
                 coco['annotations'].append(annotation)
 
+        file_name = self._file_name.rsplit('.', 1)[0]
+        coco_output = os.path.join(self._annotations_dir, f'{file_name}.json')
         with open(coco_output, 'w+') as coco_file:
             coco_file.write(json.dumps(coco))
 

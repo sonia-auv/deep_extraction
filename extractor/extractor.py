@@ -1,6 +1,6 @@
 import os
 
-from .core.parser.json import JSONParser
+from core.parser.json_parser import JSONParser
 
 class Extractor:
     """ Labelbox.io label object extractor. """
@@ -17,12 +17,12 @@ class Extractor:
         self._extract_labels_from_json(logger)
 
 
-    def __repr__(self):
-        return (f'{self.__class__.__name__}('
-                f'{self._json_file!r}, {self._output_path!r}, )')
+    # def __repr__(self):
+    #     return (f'{self.__class__.__name__}('
+    #             f'{self._json_file!r}, {self._output_path!r}, )')
     
     def __str__(self):
-        return f'An labebox.io object extractor with output path {self._output_path}'
+        return 'An labebox.io object extractor with output path {}'.format(self._output_path)
 
 
     def _prepare_output_path(self):

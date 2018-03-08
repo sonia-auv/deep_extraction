@@ -42,7 +42,8 @@ class GoogleCloudStorageLinkGenerator:
     
     def create_csv(self, urls, sub_dir):
         """ Generate a csv file. """
-        output_file = os.path.join(self.output_dir, f'link_to_gcc_{sub_dir}_{datetime.now()}.csv')
+        file_name = 'link_to_gcc_{}_{}.csv'.format(sub_dir,datetime.now())
+        output_file = os.path.join(self.output_dir,  file_name)
         with open(output_file, 'w') as csv_file:
             csv_writer = csv.writer(csv_file, delimiter=',', quoting=csv.QUOTE_ALL)
             for url in urls:

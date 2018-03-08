@@ -18,12 +18,12 @@ class JSONParser:
         self._extract_json_from_file()
         self.parse_extracted_data_to_object(logger)
     
-    def __repr__(self):
-        return (f'{self.__class__.__name__}('
-                f'{self._json_file!r}, {self._logger!r}')
+    # def __repr__(self):
+    #     return (f'{self.__class__.__name__}('
+    #             f'{self._json_file!r}, {self._logger!r}')
     
-    def __str__(self):
-        return f'A json parser for file {self._json_file}'
+    # def __str__(self):
+    #     return f'A json parser for file {self._json_file}'
 
 
     def _extract_json_from_file(self):

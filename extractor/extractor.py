@@ -1,6 +1,6 @@
 import os
 
-from core.parser.json_parser import JSONParser
+from .core.parser.json_parser import JSONParser
 
 class Extractor:
     """ Labelbox.io label object extractor. """

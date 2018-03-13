@@ -27,6 +27,7 @@ class LabeledImage:
         self._required_img_height = kwargs['Required Image Height']
         self._required_img_width = kwargs['Required Image Width']
         self._annotation_type = kwargs['Annotation Type']
+        self._augment_images = kwargs['Augment Images']
         self._file_name = self._source_img_url.rsplit('/', 1)[-1].split('.')[0]
         self._file_ext = '.' + self._source_img_url.split("/")[-1].split('.')[1]
         self._download_image(kwargs['Label'])
@@ -56,7 +57,6 @@ class LabeledImage:
             self._img_width, self._img_height = image.size
             self._logger.warn('WARN: Skipping file download since it already exist @ {}\n'.format(self._image_file_path))
 
-    #todo: fix .jpg.jpg
     def _resize_image(self, image_path):
         file_name =  self._file_name + self._file_ext
         self._resized_image_path = os.path.join(self._resized_image_dir, file_name)
@@ -101,7 +101,10 @@ class LabeledImage:
             self._logger.error('Unknown annotation type : {}'.format(self._annotation_type))
             raise ValueError()
 
-
+    def create_augmented_images(self):
+        #TODO: Complete images augmentation script using augmentor if required ???
+        pass
+        
     def _generate_pascal_voc_file(self, json_labels, apply_reduction=False, apply_augmentation=False, debug=False):
         """ Transform WKT polygon to pascal voc. """
         self._logger.info('Transforming shapely wtk polygon format to pascal voc.\n')

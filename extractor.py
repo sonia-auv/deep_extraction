@@ -45,12 +45,19 @@ class Main():
                                  required=False,
                                  help='Model required image height')
         
-        args_parser.add_argument('-a', '--annotation_type',
+        args_parser.add_argument('-at', '--annotation_type',
                                  default='Pascal VOC',
                                  dest='annotation_type',
                                  type=str,
                                  required=False,
                                  help='Annotation type available types are Pascal VOC or COCO')
+
+        args_parser.add_argument('-ag', '--augment_images',
+                                 default=False,
+                                 dest='augment_images',
+                                 type=bool,
+                                 required=False,
+                                 help='Augment image after downloading them')
 
 
 
@@ -66,7 +73,8 @@ class Main():
                               output_path=parsed_args.output_path,
                               required_img_width=parsed_args.required_img_width,
                               required_img_height=parsed_args.required_img_height,
-                              annotation_type=parsed_args.annotation_type)
+                              annotation_type=parsed_args.annotation_type,
+                              augment_images=parsed_args.augment_images)
 
 
 if __name__ == '__main__':

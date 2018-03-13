@@ -56,6 +56,7 @@ class LabeledImage:
             self._img_width, self._img_height = image.size
             self._logger.warn('WARN: Skipping file download since it already exist @ {}\n'.format(self._image_file_path))
 
+    #todo: fix .jpg.jpg
     def _resize_image(self, image_path):
         file_name =  self._file_name + self._file_ext
         self._resized_image_path = os.path.join(self._resized_image_dir, file_name)
@@ -83,7 +84,7 @@ class LabeledImage:
                                             self._top_border, self._bottom_border,
                                             self._left_border, self._right_border,
                                             cv2.BORDER_CONSTANT, value=color)
-
+            
             cv2.imwrite(self._resized_image_path, new_image)
             self._logger.info('Resized image at {}.jpg'.format(self._resized_image_path))
         else:
@@ -95,13 +96,13 @@ class LabeledImage:
             self._generate_pascal_voc_file(json_labels, apply_reduction=True)  
         elif self._annotation_type == self.ANNOTATION_COCO:
             pass
-            self._generate_coco_file(json_labels, apply_reduction=True)
+            self._generate_coco_file(json_labels, apply_reduction=True, debug=True)
         else:
             self._logger.error('Unknown annotation type : {}'.format(self._annotation_type))
             raise ValueError()
 
 
-    def _generate_pascal_voc_file(self, json_labels, apply_reduction=False, apply_augmentation=False):
+    def _generate_pascal_voc_file(self, json_labels, apply_reduction=False, apply_augmentation=False, debug=False):
         """ Transform WKT polygon to pascal voc. """
         self._logger.info('Transforming shapely wtk polygon format to pascal voc.\n')
         xml_writer = PascalWriter(self._image_file_path, self._img_width, self._img_height)
@@ -133,16 +134,20 @@ class LabeledImage:
                 file_name = self._file_name + self._file_ext
                 file_path = os.path.join(self._resized_image_dir, file_name)
 
-                image = cv2.imread(file_path)
-
-                top_xy = (xy_coords[2], xy_coords[3])
-                bottom_xy = (xy_coords[6], xy_coords[7])
-                self.show_bounding_box(image, top_xy, bottom_xy)
-            
                 xml_writer.addObject(name=label.lower(), xy_coords=xy_coords)
 
+                if debug:
+                    image = cv2.imread(file_path)
+
+                    top_xy = (xy_coords[2], xy_coords[3])
+                    bottom_xy = (xy_coords[6], xy_coords[7])
+                    self.show_bounding_box(image, top_xy, bottom_xy)
+
         file_name = '{}.xml'.format(self._file_name)
-        xml_file_path = os.path.join(self._annotations_dir, file_name)
+        pascal_voc_path = os.path.join(self._annotations_dir, 'pascal_voc')
+        if not os.path.exists(pascal_voc_path):
+            os.mkdir(pascal_voc_path)
+        xml_file_path = os.path.join(pascal_voc_path, file_name)
 
         if not os.path.exists(xml_file_path):
             xml_writer.save(xml_file_path)
@@ -150,13 +155,7 @@ class LabeledImage:
         else:
             self._logger.warning('WARN: Skipping file creation since it already exist at {}\n'.format(xml_file_path))
 
-    def show_bounding_box(self, image, top_xy, bottom_xy):
-        cv2.rectangle(image, top_xy, bottom_xy, (255, 0, 0), 1)
-        cv2.imshow('Bounding box',image)
-        cv2.waitKey(1000)
-        cv2.destroyAllWindows()
-
-    def _generate_coco_file(self, json_labels, apply_reduction=True):
+    def _generate_coco_file(self, json_labels, apply_reduction=True, debug=False):
         """ Transform WKT polygon to coco format. """
         coco = {
             'info': None,
@@ -174,6 +173,28 @@ class LabeledImage:
             'url': 'labelbox.io',
             'date_created': dt.datetime.now().isoformat()
         }
+
+        image = {
+            "id": self._id,
+            "file_name": self._file_name,
+            "license": None,
+            "flickr_url": self._source_img_url,
+            "coco_url": self._source_img_url,
+            "date_captured": None,
+        }
+
+        if apply_reduction:
+            image.update({
+                "width": self._required_img_width,
+                "height": self._required_img_height,
+            })
+        else:
+            image.update({
+                "width": self._img_width,
+                "height": self._img_height,   
+            })
+
+        coco['images'].append(image)
 
         for label_name, polygon in json_labels.items():
             try:
@@ -194,66 +215,57 @@ class LabeledImage:
                 segmentation = []
                 for x, y in m.exterior.coords:
                     if apply_reduction:
-                        image = {
-                            "id": self._id,
-                            "width": self._required_img_width,
-                            "height": self._required_img_height,
-                            "file_name": self._file_name,
-                            "license": None,
-                            "flickr_url": self._source_img_url,
-                            "coco_url": self._source_img_url,
-                            "date_captured": None,
-                        }
-
-                        new_x = int(x*self._ratio) 
-                        new_y = int(y*self._ratio)
-
-                        if max(self._top_border, self._bottom_border) > max(self._left_border, self._right_border):
-                            segmentation.extend([new_x, self._required_img_height - new_y - self._bottom_border])
-                        else:
-                            segmentation.extend([self._required_img_width - new_x - self._right_border, new_y])
+                        segmentation.extend([x * self._ratio, self._required_img_height- y * self._ratio - self._bottom_border])
                     else:
-                        
-                        image = {
-                            "id": self._id,
-                            "width": self._img_width,
-                            "height": self._img_height,
-                            "file_name": self._file_name,
-                            "license": None,
-                            "flickr_url": self._source_img_url,
-                            "coco_url": self._source_img_url,
-                            "date_captured": None,
-                        }
-
-                        if max(self._top_border, self._bottom_border) > max(self._left_border, self._right_border):
-                            segmentation.extend([x, self._img_height-y])
-                        else:
-                            segmentation.extend([self._img_width - x, y])
-
-
-                coco['images'].append(image)
+                        segmentation.extend([x, self._img_height-y])
 
                 annotation = {
-                    "id": len(coco['annotations']) + 1,
-                    "image_id": self._id,
-                    "category_id": label_id,
-                    "segmentation": [segmentation],
-                    "area": m.area,  # float
-                    "bbox": [m.bounds[0], m.bounds[1],
-                             m.bounds[2]-m.bounds[0],
-                             m.bounds[3]-m.bounds[1]],
-                    "iscrowd": 0
+                        "id": len(coco['annotations']) + 1,
+                        "image_id": self._id,
+                        "category_id": label_name,
+                        "segmentation": [segmentation],
+                        "iscrowd": 0,
                 }
 
-                coco['annotations'].append(annotation)
+                if apply_reduction:
+                    annotation.update({
+                        "area": m.area * self._ratio,
+                        "bbox": [m.bounds[0] * self._ratio, m.bounds[1] * self._ratio,
+                               (m.bounds[2]-m.bounds[0]) * self._ratio,
+                               (m.bounds[3]-m.bounds[1]) * self._ratio],
+                        
+                    })                  
+                else:
+                    annotation.update({
+                        "area": m.area,  # float
+                        "bbox": [m.bounds[0], m.bounds[1],
+                                 m.bounds[2]-m.bounds[0],
+                                 m.bounds[3]-m.bounds[1]],
+                    })   
 
-        file_name = self._file_name.rsplit('.', 1)[0]
-        annotation_file = os.path.join(self._annotations_dir, '{}.json'.format(file_name))
-        
-        if os.path.exists(annotation_file):
-            with open(annotation_file, 'w+') as coco_file:
+                if debug:
+                    image = cv2.imread(self._resized_image_path)
+                    top_xy = (int(segmentation[2]), int(segmentation[3]))
+                    bottom_xy = (int(segmentation[6]), int(segmentation[7]))
+                    self.show_bounding_box(image, top_xy, bottom_xy)     
+
+                coco['annotations'].append(annotation) 
+
+        file_name = '{}.json'.format(self._file_name)
+        coco_path = os.path.join(self._annotations_dir, 'coco')
+        if not os.path.exists(coco_path):
+            os.mkdir(coco_path)
+        coco_file = os.path.join(coco_path, file_name)
+
+        if not os.path.exists(coco_file):
+            with open(coco_file, 'w+') as coco_file:
                 coco_file.write(json.dumps(coco))
-            self._logger.info('Coco annotation file has been created at {}\n'.format(str(annotation_file)))
+            self._logger.info('Coco annotation file has been created at {}\n'.format(str(coco_file)))
         else:
-            self._logger.warning('WARN: Skipping file creation since it already exist at {}\n'.format(annotation_file))
+            self._logger.warning('WARN: Skipping file creation since it already exist at {}\n'.format(coco_file))
 
+    def show_bounding_box(self, image, top_xy, bottom_xy):
+        cv2.rectangle(image, top_xy, bottom_xy, (0, 255, 0), 1)
+        cv2.imshow('Bounding box',image)
+        cv2.waitKey(1000)
+        cv2.destroyAllWindows()

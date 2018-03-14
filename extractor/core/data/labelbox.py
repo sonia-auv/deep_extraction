@@ -31,6 +31,7 @@ class LabeledImage:
         self._required_img_width = kwargs['Required Image Width']
         self._annotation_type = kwargs['Annotation Type']
         #self._augment_images = kwargs['Augment Images']
+        self.label_names = set()
         self._file_name = self._source_img_url.rsplit('/', 1)[-1].split('.')[0]
         self._file_ext = '.' + \
             self._source_img_url.split("/")[-1].split('.')[1]
@@ -173,7 +174,6 @@ class LabeledImage:
                             xy_coords.extend(
                                 [new_x, self._required_img_height - new_y - self._bottom_border])
                         else:
-                            print("here")
                             xy_coords.extend(
                                 [self._required_img_width - new_x - self._right_border, new_y])
                     else:
@@ -189,6 +189,7 @@ class LabeledImage:
                 file_name = self._file_name + self._file_ext
                 file_path = os.path.join(self._resized_image_dir, file_name)
 
+                self.label_names.add(label.lower())
                 xml_writer.addObject(name=label.lower(), xy_coords=xy_coords)
 
                 if debug:

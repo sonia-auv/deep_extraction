@@ -56,3 +56,26 @@ class JSONParser:
 
             image = LabeledImage(logger, **entry)
             labeled_imgs.append(image)
+
+        self.generate_label_map(labeled_imgs)
+
+    # TODO: Complete label map generation
+    def generate_label_map(self, labeled_images):
+
+        label_names = set()
+        for label in labeled_images:
+            label_names.update(label.label_names)
+
+        label_names = tuple(label_names)
+
+        data = []
+
+        formated_label_map = """ item {
+                                    id: {}
+                                    name: '{}'
+                                 }"""
+        for index, label_name in enumerate(label_names):
+            formated_label_map.format(index, label_name)
+
+            import IPython
+            IPython.embed()

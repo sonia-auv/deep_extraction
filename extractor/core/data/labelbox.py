@@ -1,3 +1,4 @@
+import Augmentor
 import os
 import json
 import requests
@@ -7,6 +8,7 @@ import numpy as np
 from PIL import Image
 from shapely import wkt
 from pascal_voc_writer import Writer as PascalWriter
+
 
 class LabeledImage:
     """ Custom class matching returned json object of labelbox.io. """
@@ -24,21 +26,24 @@ class LabeledImage:
         self._images_dir = kwargs['Images Dir']
         self._resized_image_dir = kwargs['Resized Image Dir']
         self._annotations_dir = kwargs['Annotations Dir']
+        #self._augmented_dir = kwargs['Augmented Dir']
         self._required_img_height = kwargs['Required Image Height']
         self._required_img_width = kwargs['Required Image Width']
         self._annotation_type = kwargs['Annotation Type']
-        self._augment_images = kwargs['Augment Images']
+        #self._augment_images = kwargs['Augment Images']
         self._file_name = self._source_img_url.rsplit('/', 1)[-1].split('.')[0]
-        self._file_ext = '.' + self._source_img_url.split("/")[-1].split('.')[1]
+        self._file_ext = '.' + \
+            self._source_img_url.split("/")[-1].split('.')[1]
         self._download_image(kwargs['Label'])
         self._resize_image(self._image_file_path)
+        # self._generated_augmented_images()
         self._generate_annotations(kwargs['Label'])
-       
+
     def _download_image(self, json_labels):
         """ Download image from provided link (Cloud link)."""
         file_name = self._file_name + self._file_ext
         self._image_file_path = os.path.join(self._images_dir, file_name)
-        
+
         if not os.path.exists(self._image_file_path):
             try:
                 response = requests.get(self._source_img_url, stream=True)
@@ -46,69 +51,114 @@ class LabeledImage:
                 image = Image.open(response.raw)
                 self._img_width, self._img_height = image.size
                 image.save(self._image_file_path, format=image.format)
-                self._logger.info('Downloaded image form source {} at {}'.format(self._source_img_url, self._image_file_path))
+                self._logger.info('Downloaded image form source {} at {}'.format(
+                    self._source_img_url, self._image_file_path))
 
             except requests.exceptions.MissingSchema as e:
-                self._logger.exception('"source_image_url" attribute must be a URL.')
+                self._logger.exception(
+                    '"source_image_url" attribute must be a URL.')
             except requests.exceptions.ConnectionError as e:
-                self._logger.exception('Failed to fetch image from {}'.format(self._source_img_url))
+                self._logger.exception(
+                    'Failed to fetch image from {}'.format(self._source_img_url))
         else:
             image = Image.open(self._image_file_path)
             self._img_width, self._img_height = image.size
-            self._logger.warn('WARN: Skipping file download since it already exist @ {}\n'.format(self._image_file_path))
+            self._logger.warn('WARN: Skipping file download since it already exist @ {}\n'.format(
+                self._image_file_path))
 
     def _resize_image(self, image_path):
-        file_name =  self._file_name + self._file_ext
-        self._resized_image_path = os.path.join(self._resized_image_dir, file_name)
+        file_name = self._file_name + self._file_ext
+        self._resized_image_path = os.path.join(
+            self._resized_image_dir, file_name)
 
         image = cv2.imread(image_path)
-        original_size = image.shape[:2] # old_size is in (height, width) format
-        required_size = max(self._required_img_height, self._required_img_width)
+        # old_size is in (height, width) format
+        original_size = image.shape[:2]
+        required_size = max(self._required_img_height,
+                            self._required_img_width)
 
-        self._ratio = float(required_size)/max(original_size)    
+        self._ratio = float(required_size)/max(original_size)
         self._new_size = tuple([int(x*self._ratio) for x in original_size])
 
         # new_size should be in (width, height) format
-        image = cv2.resize(image, (self._new_size[1], self._new_size[0])) 
+        image = cv2.resize(image, (self._new_size[1], self._new_size[0]))
 
         delta_w = required_size - self._new_size[1]
         delta_h = required_size - self._new_size[0]
-        
-        self._top_border, self._bottom_border = delta_h//2, delta_h-(delta_h//2)
-        self._left_border, self._right_border = delta_w//2, delta_w-(delta_w//2)
 
+        self._top_border, self._bottom_border = delta_h//2, delta_h - \
+            (delta_h//2)
+        self._left_border, self._right_border = delta_w//2, delta_w - \
+            (delta_w//2)
 
         if not os.path.exists(self._resized_image_path):
             color = [0, 0, 0]
-            new_image = cv2.copyMakeBorder(image, 
-                                            self._top_border, self._bottom_border,
-                                            self._left_border, self._right_border,
-                                            cv2.BORDER_CONSTANT, value=color)
-            
+            new_image = cv2.copyMakeBorder(image,
+                                           self._top_border, self._bottom_border,
+                                           self._left_border, self._right_border,
+                                           cv2.BORDER_CONSTANT, value=color)
+
             cv2.imwrite(self._resized_image_path, new_image)
-            self._logger.info('Resized image at {}.jpg'.format(self._resized_image_path))
+            self._logger.info('Resized image at {}.jpg'.format(
+                self._resized_image_path))
         else:
-             self._logger.warn('WARN: Skipping file resizing since it already exist @ {}\n'.format(self._resized_image_path))
+            self._logger.warn('WARN: Skipping file resizing since it already exist @ {}\n'.format(
+                self._resized_image_path))
 
     def _generate_annotations(self, json_labels):
         """ Handle different annotation type. """
-        if self._annotation_type == self.ANNOTATION_PASCAL_VOC:  
-            self._generate_pascal_voc_file(json_labels, apply_reduction=True)  
+        if self._annotation_type == self.ANNOTATION_PASCAL_VOC:
+            self._generate_pascal_voc_file(json_labels, apply_reduction=True)
         elif self._annotation_type == self.ANNOTATION_COCO:
             pass
-            self._generate_coco_file(json_labels, apply_reduction=True, debug=True)
+            self._generate_coco_file(
+                json_labels, apply_reduction=True, debug=False)
         else:
-            self._logger.error('Unknown annotation type : {}'.format(self._annotation_type))
+            self._logger.error(
+                'Unknown annotation type : {}'.format(self._annotation_type))
             raise ValueError()
 
-    def create_augmented_images(self):
-        #TODO: Complete images augmentation script using augmentor if required ???
-        pass
-        
-    def _generate_pascal_voc_file(self, json_labels, apply_reduction=False, apply_augmentation=False, debug=False):
+    # TODO: Extract to training split on train / validation / test split
+    # def _generated_augmented_images(self, count=10, probability=0.02):
+    #     self._logger.info('Starting image random augmentation phase')
+
+    #     if self._required_img_height > 0 or self._required_img_width > 0:
+    #         source_dir = self._resized_image_dir
+    #     else:
+    #         source_dir = self._images_dir
+
+    #     pipeline = Augmentor.Pipeline(source_dir, self._augmented_dir)
+
+    #     pipeline.black_and_white(probability=probability, threshold=128)
+    #     pipeline.rotate(probability=probability,
+    #                     max_left_rotation=10, max_right_rotation=10)
+    #     pipeline.crop_centre(probability=probability, percentage_area=0.7)
+    #     pipeline.flip_left_right(probability=probability)
+    #     pipeline.flip_top_bottom(probability=probability)
+    #     pipeline.gaussian_distortion(
+    #         probability=probability, grid_width=20, grid_height=20,
+    #         magnitude=5, corner='bell', method='in')
+    #     pipeline.greyscale(probability=probability)
+    #     pipeline.random_distortion(
+    #         probability=probability, grid_width=8, grid_height=8, magnitude=10)
+    #     pipeline.random_erasing(probability=probability, rectangle_area=0.15)
+    #     pipeline.rotate_random_90(probability=probability)
+    #     pipeline.shear(probability=probability,
+    #                    max_shear_left=25, max_shear_right=25)
+    #     pipeline.skew(probability=probability, magnitude=1)
+    #     pipeline.zoom_random(probability=probability, percentage_area=0.8,
+    #                          randomise_percentage_area=True)
+
+    #   pipeline.sample(count)
+
+    #   self._logger.info('Execution of image augmentation was sucessfull')
+
+    def _generate_pascal_voc_file(self, json_labels, apply_reduction=False, debug=False):
         """ Transform WKT polygon to pascal voc. """
-        self._logger.info('Transforming shapely wtk polygon format to pascal voc.\n')
-        xml_writer = PascalWriter(self._image_file_path, self._img_width, self._img_height)
+        self._logger.info(
+            'Transforming shapely wtk polygon format to pascal voc.\n')
+        xml_writer = PascalWriter(
+            self._image_file_path, self._img_width, self._img_height)
 
         for label, polygon in json_labels.items():
             multi_polygons = wkt.loads(polygon)
@@ -116,24 +166,26 @@ class LabeledImage:
                 xy_coords = []
                 for x, y in m.exterior.coords:
                     if apply_reduction:
-                        new_x = int(x*self._ratio) 
+                        new_x = int(x*self._ratio)
                         new_y = int(y*self._ratio)
 
                         if max(self._top_border, self._bottom_border) > max(self._left_border, self._right_border):
-                            xy_coords.extend([new_x, self._required_img_height - new_y - self._bottom_border])
+                            xy_coords.extend(
+                                [new_x, self._required_img_height - new_y - self._bottom_border])
                         else:
                             print("here")
-                            xy_coords.extend([self._required_img_width - new_x - self._right_border, new_y])
+                            xy_coords.extend(
+                                [self._required_img_width - new_x - self._right_border, new_y])
                     else:
                         if max(self._top_border, self._bottom_border) > max(self._left_border, self._right_border):
                             xy_coords.extend([x, self._img_height-y])
                         else:
                             xy_coords.extend([self._img_width - x, y])
-            
+
                 # remove last polygon if it is identical to first point
                 if xy_coords[-2:] == xy_coords[:2]:
                     xy_coords = xy_coords[:-2]
-                
+
                 file_name = self._file_name + self._file_ext
                 file_path = os.path.join(self._resized_image_dir, file_name)
 
@@ -154,9 +206,11 @@ class LabeledImage:
 
         if not os.path.exists(xml_file_path):
             xml_writer.save(xml_file_path)
-            self._logger.info('Pascal VOC annotation file create for image {}.\n\n'.format(self._file_name))
+            self._logger.info(
+                'Pascal VOC annotation file create for image {}.\n\n'.format(self._file_name))
         else:
-            self._logger.warning('WARN: Skipping file creation since it already exist at {}\n'.format(xml_file_path))
+            self._logger.warning(
+                'WARN: Skipping file creation since it already exist at {}\n'.format(xml_file_path))
 
     def _generate_coco_file(self, json_labels, apply_reduction=True, debug=False):
         """ Transform WKT polygon to coco format. """
@@ -194,7 +248,7 @@ class LabeledImage:
         else:
             image.update({
                 "width": self._img_width,
-                "height": self._img_height,   
+                "height": self._img_height,
             })
 
         coco['images'].append(image)
@@ -203,7 +257,7 @@ class LabeledImage:
             try:
                 # check if label category exists in 'categories' field
                 label_id = [c['id'] for c in coco['categories']
-                          if c['supercategory'] == label_name][0]
+                            if c['supercategory'] == label_name][0]
             except IndexError as e:
                 label_id = len(coco['categories']) + 1
                 category = {
@@ -212,47 +266,48 @@ class LabeledImage:
                     'name': label_name
                 }
                 coco['categories'].append(category)
-            
+
             multi_polygons = wkt.loads(polygon)
             for m in multi_polygons:
                 segmentation = []
                 for x, y in m.exterior.coords:
                     if apply_reduction:
-                        segmentation.extend([x * self._ratio, self._required_img_height- y * self._ratio - self._bottom_border])
+                        segmentation.extend(
+                            [x * self._ratio, self._required_img_height - y * self._ratio - self._bottom_border])
                     else:
                         segmentation.extend([x, self._img_height-y])
 
                 annotation = {
-                        "id": len(coco['annotations']) + 1,
-                        "image_id": self._id,
-                        "category_id": label_name,
-                        "segmentation": [segmentation],
-                        "iscrowd": 0,
+                    "id": len(coco['annotations']) + 1,
+                    "image_id": self._id,
+                    "category_id": label_name,
+                    "segmentation": [segmentation],
+                    "iscrowd": 0,
                 }
 
                 if apply_reduction:
                     annotation.update({
                         "area": m.area * self._ratio,
                         "bbox": [m.bounds[0] * self._ratio, m.bounds[1] * self._ratio,
-                               (m.bounds[2]-m.bounds[0]) * self._ratio,
-                               (m.bounds[3]-m.bounds[1]) * self._ratio],
-                        
-                    })                  
+                                 (m.bounds[2]-m.bounds[0]) * self._ratio,
+                                 (m.bounds[3]-m.bounds[1]) * self._ratio],
+
+                    })
                 else:
                     annotation.update({
                         "area": m.area,  # float
                         "bbox": [m.bounds[0], m.bounds[1],
                                  m.bounds[2]-m.bounds[0],
                                  m.bounds[3]-m.bounds[1]],
-                    })   
+                    })
 
                 if debug:
                     image = cv2.imread(self._resized_image_path)
                     top_xy = (int(segmentation[2]), int(segmentation[3]))
                     bottom_xy = (int(segmentation[6]), int(segmentation[7]))
-                    self.show_bounding_box(image, top_xy, bottom_xy)     
+                    self.show_bounding_box(image, top_xy, bottom_xy)
 
-                coco['annotations'].append(annotation) 
+                coco['annotations'].append(annotation)
 
         file_name = '{}.json'.format(self._file_name)
         coco_path = os.path.join(self._annotations_dir, 'coco')
@@ -263,12 +318,14 @@ class LabeledImage:
         if not os.path.exists(coco_file):
             with open(coco_file, 'w+') as coco_file:
                 coco_file.write(json.dumps(coco))
-            self._logger.info('Coco annotation file has been created at {}\n'.format(str(coco_file)))
+            self._logger.info(
+                'Coco annotation file has been created at {}\n'.format(str(coco_file)))
         else:
-            self._logger.warning('WARN: Skipping file creation since it already exist at {}\n'.format(coco_file))
+            self._logger.warning(
+                'WARN: Skipping file creation since it already exist at {}\n'.format(coco_file))
 
     def show_bounding_box(self, image, top_xy, bottom_xy):
         cv2.rectangle(image, top_xy, bottom_xy, (0, 255, 0), 1)
-        cv2.imshow('Bounding box',image)
+        cv2.imshow('Bounding box', image)
         cv2.waitKey(1000)
         cv2.destroyAllWindows()

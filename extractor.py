@@ -30,21 +30,21 @@ class Main():
                                  type=str,
                                  required=True,
                                  help='Path to destination directory where images and bounding box are created')
-        
+
         args_parser.add_argument('-iw', '--required_img_width',
-                                default=256,
-                                dest='required_img_width',
-                                type=int,
-                                required=False,
-                                help='Model required image width')
-        
+                                 default=256,
+                                 dest='required_img_width',
+                                 type=int,
+                                 required=False,
+                                 help='Model required image width')
+
         args_parser.add_argument('-ih', '--required_img_height',
                                  default=256,
                                  dest='required_img_height',
                                  type=int,
                                  required=False,
                                  help='Model required image height')
-        
+
         args_parser.add_argument('-at', '--annotation_type',
                                  default='Pascal VOC',
                                  dest='annotation_type',
@@ -52,17 +52,14 @@ class Main():
                                  required=False,
                                  help='Annotation type available types are Pascal VOC or COCO')
 
-        args_parser.add_argument('-ag', '--augment_images',
-                                 default=False,
-                                 dest='augment_images',
-                                 type=bool,
-                                 required=False,
-                                 help='Augment image after downloading them')
-
-
+        # args_parser.add_argument('-ag', '--augment_images',
+        #                          default=False,
+        #                          dest='augment_images',
+        #                          type=bool,
+        #                          required=False,
+        #                          help='Augment image after downloading them')
 
         return args_parser.parse_args()
-
 
     def main(self):
         """ Application main method. """
@@ -73,8 +70,8 @@ class Main():
                               output_path=parsed_args.output_path,
                               required_img_width=parsed_args.required_img_width,
                               required_img_height=parsed_args.required_img_height,
-                              annotation_type=parsed_args.annotation_type,
-                              augment_images=parsed_args.augment_images)
+                              annotation_type=parsed_args.annotation_type,)
+        # augment_images=parsed_args.augment_images,)
 
 
 if __name__ == '__main__':

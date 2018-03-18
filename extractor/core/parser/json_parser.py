@@ -1,4 +1,5 @@
 import json
+import os
 
 from extractor.core.data.labelbox import LabeledImage
 
@@ -11,6 +12,7 @@ class JSONParser:
         self._json_file = kwargs['json_file']
         self._images_dir = kwargs['images_dir']
         self._resized_dir = kwargs['resize_dir']
+        self._output_dir = kwargs['output_dir']
         #self._augmented_dir = kwargs['augmented_dir']
         self._annotations_dir = kwargs['annotations_dir']
         self._required_img_width = kwargs['required_img_width']
@@ -69,13 +71,20 @@ class JSONParser:
         label_names = tuple(label_names)
 
         data = []
+        first_line = 'item {\n'
+        second_line = '  id: {}\n'
+        third_line = '  name: \'{}\'\n'
+        fourth_line = '}'
 
-        formated_label_map = """ item {
-                                    id: {}
-                                    name: '{}'
-                                 }"""
         for index, label_name in enumerate(label_names):
-            formated_label_map.format(index, label_name)
+            first_line = 'item {\n'
+            second_line = '  id: {}\n'.format(index)
+            third_line = '  name: \'{}\'\n'.format(label_name)
+            fourth_line = '}\n'
 
-            import IPython
-            IPython.embed()
+            data.append(first_line + second_line + third_line + fourth_line)
+
+        file_path = os.path.join(self._output_dir, 'label_map.pbtxt')
+
+        with open(file_path, 'w') as label_file:
+            label_file.writelines(data)

@@ -57,6 +57,7 @@ class Extractor:
         config = {
             'json_file': self._json_file,
             'images_dir': self._image_dir,
+            'output_dir': self._output_path,
             'resize_dir': self._resized_dir,
             #'augmented_dir': self._augmented_dir,
             'annotations_dir': self._annotation_dir,

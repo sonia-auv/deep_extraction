@@ -158,46 +158,59 @@ class LabeledImage:
         """ Transform WKT polygon to pascal voc. """
         self._logger.info(
             'Transforming shapely wtk polygon format to pascal voc.\n')
+        if apply_reduction:
+            image_path = self._resized_image_path
+        else:
+            image_path = self._image_file_path
+
         xml_writer = PascalWriter(
-            self._image_file_path, self._img_width, self._img_height)
+            image_path, self._img_width, self._img_height)
 
         for label, polygon in json_labels.items():
-            multi_polygons = wkt.loads(polygon)
-            for m in multi_polygons:
-                xy_coords = []
-                for x, y in m.exterior.coords:
-                    if apply_reduction:
-                        new_x = int(x*self._ratio)
-                        new_y = int(y*self._ratio)
+            if label != 'Skip':
+                try:
+                    multi_polygons = wkt.loads(polygon)
+                    for m in multi_polygons:
+                        xy_coords = []
+                        for x, y in m.exterior.coords:
+                            if apply_reduction:
+                                new_x = int(x*self._ratio)
+                                new_y = int(y*self._ratio)
 
-                        if max(self._top_border, self._bottom_border) > max(self._left_border, self._right_border):
-                            xy_coords.extend(
-                                [new_x, self._required_img_height - new_y - self._bottom_border])
-                        else:
-                            xy_coords.extend(
-                                [self._required_img_width - new_x - self._right_border, new_y])
-                    else:
-                        if max(self._top_border, self._bottom_border) > max(self._left_border, self._right_border):
-                            xy_coords.extend([x, self._img_height-y])
-                        else:
-                            xy_coords.extend([self._img_width - x, y])
+                                if max(self._top_border, self._bottom_border) > max(self._left_border, self._right_border):
+                                    xy_coords.extend(
+                                        [new_x, self._required_img_height - new_y - self._bottom_border])
+                                else:
+                                    xy_coords.extend(
+                                        [self._required_img_width - new_x - self._right_border, new_y])
+                            else:
+                                if max(self._top_border, self._bottom_border) > max(self._left_border, self._right_border):
+                                    xy_coords.extend([x, self._img_height-y])
+                                else:
+                                    xy_coords.extend([self._img_width - x, y])
 
-                # remove last polygon if it is identical to first point
-                if xy_coords[-2:] == xy_coords[:2]:
-                    xy_coords = xy_coords[:-2]
+                        # remove last polygon if it is identical to first point
+                        if xy_coords[-2:] == xy_coords[:2]:
+                            xy_coords = xy_coords[:-2]
 
-                file_name = self._file_name + self._file_ext
-                file_path = os.path.join(self._resized_image_dir, file_name)
+                        file_name = self._file_name + self._file_ext
+                        file_path = os.path.join(
+                            self._resized_image_dir, file_name)
 
-                self.label_names.add(label.lower())
-                xml_writer.addObject(name=label.lower(), xy_coords=xy_coords)
+                        if debug:
+                            image = cv2.imread(file_path)
 
-                if debug:
-                    image = cv2.imread(file_path)
+                            top_xy = (xy_coords[2], xy_coords[3])
+                            bottom_xy = (xy_coords[6], xy_coords[7])
+                            self.show_bounding_box(image, top_xy, bottom_xy)
 
-                    top_xy = (xy_coords[2], xy_coords[3])
-                    bottom_xy = (xy_coords[6], xy_coords[7])
-                    self.show_bounding_box(image, top_xy, bottom_xy)
+                    self.label_names.add(label.lower())
+                    xml_writer.addObject(
+                        name=label.lower(), xy_coords=xy_coords)
+                except:
+                    print('SKIOOOOOOOOOOOOOO')
+            else:
+                # handle Skip label item
 
         file_name = '{}.xml'.format(self._file_name)
         pascal_voc_path = os.path.join(self._annotations_dir, 'pascal_voc')

@@ -9,6 +9,8 @@ from PIL import Image
 from shapely import wkt
 from pascal_voc_writer import Writer as PascalWriter
 
+from .generator.pascal_voc import PascalVOCGenerator
+
 
 class LabeledImage:
     """ Custom class matching returned json object of labelbox.io. """
@@ -27,19 +29,16 @@ class LabeledImage:
         self._images_dir = kwargs['Images Dir']
         self._resized_image_dir = kwargs['Resized Image Dir']
         self._annotations_dir = kwargs['Annotations Dir']
-        # self._augmented_dir = kwargs['Augmented Dir']
         self._required_img_height = kwargs['Required Image Height']
         self._required_img_width = kwargs['Required Image Width']
         self._annotation_type = kwargs['Annotation Type']
-        # self._augment_images = kwargs['Augment Images']
         self.label_names = set()
         self._file_name = self._source_img_url.rsplit('/', 1)[-1].split('.')[0]
         self._file_ext = '.' + \
             self._source_img_url.split("/")[-1].split('.')[1]
         self._download_image(kwargs['Label'])
         self._resize_image(self._image_file_path)
-        # self._generated_augmented_images()
-        self._generate_annotations(kwargs['Label'])
+        self._generate_annotations(logger, kwargs['Label'])
 
     def _download_image(self, json_labels):
         """ Download image from provided link (Cloud link)."""
@@ -107,12 +106,11 @@ class LabeledImage:
             self._logger.warn('WARN: Skipping file resizing since it already exist @ {}\n'.format(
                 self._resized_image_path))
 
-    def _generate_annotations(self, json_labels):
+    def _generate_annotations(self, logger, json_labels):
         """ Handle different annotation type. """
         if self._annotation_type == self.ANNOTATION_PASCAL_VOC:
-            self._generate_pascal_voc_file(json_labels, apply_reduction=True)
+            self._generate_pascal_voc_file(logger, json_labels, apply_reduction=True)
         elif self._annotation_type == self.ANNOTATION_COCO:
-            pass
             self._generate_coco_file(
                 json_labels, apply_reduction=True, debug=False)
         else:
@@ -120,103 +118,40 @@ class LabeledImage:
                 'Unknown annotation type : {}'.format(self._annotation_type))
             raise ValueError()
 
-    def _generate_pascal_voc_file(self, json_labels, apply_reduction=False, debug=False):
+    def _generate_pascal_voc_file(self, logger, json_labels, apply_reduction=False, debug=False):
         """ Transform WKT polygon to pascal voc. """
-        self._apply_reduction = apply_reduction
-        self._debug = debug
-        self._logger.info(
-            'Transforming shapely wtk polygon format to pascal voc.\n')
+        config = {
+            'labelbox_id': self._id,
+            'project_name': self._project_name,
+            'json_labels': json_labels,
+            'annotation_dir': self._annotations_dir,
+            'apply_reduction': apply_reduction,
+            'debug': debug
+        }
 
-        if self._apply_reduction:
-            image_path = self._resized_image_path
+        if apply_reduction:
+            config.update({
+                'image_path': self._resized_image_path,
+                'image_width': self._required_img_width,
+                'image_height': self._required_img_height,
+                'top_border': self._top_border,
+                'bottom_border': self._bottom_border,
+                'left_border': self._left_border,
+                'right_border': self._right_border,
+                'image_ratio': self._ratio
+            })
         else:
-            image_path = self._image_file_path
-
-        if json_labels != self.SKIPPED_LABEL:
-            self._parse_labels_to_pascal_voc(json_labels, image_path)
-        else:
-            self._logger.warning(
-                'WARN:Skipping annotation since images has been skipped')
-
-    # TODO:Extract as a whole class Pascal_voc
-    def _transform_label_to_pascal_voc(self, multi_polygons):
-        for m in multi_polygons:
-            xy_coords = []
-            for x, y in m.exterior.coords:
-                if self._apply_reduction:
-                    new_x = int(x*self._ratio)
-                    new_y = int(y*self._ratio)
-
-                    horizontal_border_max = max(
-                        self._top_border, self._bottom_border)
-                    vertical_border_max = max(
-                        self._left_border, self._right_border)
-
-                    if horizontal_border_max > vertical_border_max:
-                        scaled_y = self._required_img_height - new_y - self._bottom_border
-                        xy_coords.extend([new_x, scaled_y])
-                    else:
-                        scaled_x = self._required_img_width - new_x - self._right_border
-                        xy_coords.extend([scaled_x, new_y])
-                else:
-                    if horizontal_border_max > vertical_border_max:
-                        xy_coords.extend([x, self._img_height-y])
-                    else:
-                        xy_coords.extend([self._img_width - x, y])
-
-            # remove last polygon if it is identical to first point
-            if xy_coords[-2:] == xy_coords[:2]:
-                xy_coords = xy_coords[:-2]
-
-            # TODO: Put this as a decorator
-            if self._debug:
-                file_name = self._file_name + self._file_ext
-                file_path = os.path.join(self._resized_image_dir, file_name)
-
-                image = cv2.imread(file_path)
-
-                top_xy = (xy_coords[2], xy_coords[3])
-                bottom_xy = (xy_coords[6], xy_coords[7])
-                self.show_bounding_box(image, top_xy, bottom_xy)
-
-        return xy_coords
-
-    def _parse_labels_to_pascal_voc(self, json_labels, image_path):
-        """ Parse JSON labels to pascal_voc format. """
-
-        xml_writer = PascalWriter(
-            path=image_path,
-            width=self._img_width,
-            height=self._img_height,
-            database=self._project_name)
-
-        for label, polygon in json_labels.items():
-            try:
-                multi_polygons = wkt.loads(polygon)
-
-                xy_coords = self._transform_label_to_pascal_voc(multi_polygons)
-
-                self.label_names.add(label.lower())
-                xml_writer.addObject(
-                    name=label.lower(), xy_coords=xy_coords)
-            except:
-                # TODO:Handle polygon as less than 4 points
-                import IPython
-                IPython.embed()
-
-        file_name = '{}.xml'.format(self._file_name)
-        pascal_voc_path = os.path.join(self._annotations_dir, 'pascal_voc')
-        if not os.path.exists(pascal_voc_path):
-            os.mkdir(pascal_voc_path)
-        xml_file_path = os.path.join(pascal_voc_path, file_name)
-
-        if not os.path.exists(xml_file_path):
-            xml_writer.save(xml_file_path)
-            self._logger.info(
-                'Pascal VOC annotation file create for image {}.\n\n'.format(self._file_name))
-        else:
-            self._logger.warning(
-                'WARN: Skipping file creation since it already exist at {}\n'.format(xml_file_path))
+            config.update({
+                'image_path': self._image_file_path,
+                'image_width': self._img_width,
+                'image_height': self._img_height,
+                'top_border': None,
+                'bottom_border': None,
+                'left_border': None,
+                'right_border': None,
+                'image_ratio': 1
+            })
+        generator = PascalVOCGenerator(logger, config)
 
     def _generate_coco_file(self, json_labels, apply_reduction=True, debug=False):
         """ Transform WKT polygon to coco format. """

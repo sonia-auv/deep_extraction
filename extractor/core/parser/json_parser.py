@@ -1,7 +1,7 @@
 import json
 import os
 
-from extractor.core.data.labelbox import LabeledImage
+from extractor.core.data.labelbox import LabeledImagePascalVOC, LabeledImagesCOCO
 
 
 class JSONParser:
@@ -13,12 +13,10 @@ class JSONParser:
         self._images_dir = kwargs['images_dir']
         self._resized_dir = kwargs['resize_dir']
         self._output_dir = kwargs['output_dir']
-        #self._augmented_dir = kwargs['augmented_dir']
         self._annotations_dir = kwargs['annotations_dir']
         self._required_img_width = kwargs['required_img_width']
         self._required_img_height = kwargs['required_img_height']
         self._annotation_type = kwargs['annotation_type']
-        #self._augment_images = kwargs['augment_images']
 
         self._extract_json_from_file()
         self.parse_extracted_data_to_object(logger)
@@ -46,18 +44,28 @@ class JSONParser:
     def parse_extracted_data_to_object(self, logger):
         self._logger.info('Parsing extracted data to generate custom object.')
         labeled_imgs = []
-        for entry in self._json_data:
-            entry['Images Dir'] = self._images_dir
-            entry['Annotations Dir'] = self._annotations_dir
-            #entry['Augmented Dir'] = self._augmented_dir
-            entry['Required Image Width'] = self._required_img_width
-            entry['Required Image Height'] = self._required_img_height
-            entry['Annotation Type'] = self._annotation_type
-            entry['Resized Image Dir'] = self._resized_dir
-            #entry['Augment Images'] = self._augment_images
 
-            image = LabeledImage(logger, **entry)
-            labeled_imgs.append(image)
+        if self._annotation_type == 'Pascal VOC':
+            for entry in self._json_data:
+                entry['Images Dir'] = self._images_dir
+                entry['Annotations Dir'] = self._annotations_dir
+                entry['Required Image Width'] = self._required_img_width
+                entry['Required Image Height'] = self._required_img_height
+                entry['Annotation Type'] = self._annotation_type
+                entry['Resized Image Dir'] = self._resized_dir
+
+                image = LabeledImagePascalVOC(logger, **entry)
+                labeled_imgs.append(image)
+        elif self._annotation_type == 'COCO':
+            config = {
+                'json_data': self._json_data,
+                'image_dir': self._images_dir,
+                'resized_image_dir': self._resized_dir,
+                'annotations_dir': self._annotations_dir,
+                'required_image_width': self._required_img_width,
+                'required_image_height': self._required_img_height
+            }
+            images = LabeledImagesMSCOCO(logger, **config)
 
         self.generate_label_map(labeled_imgs)
 

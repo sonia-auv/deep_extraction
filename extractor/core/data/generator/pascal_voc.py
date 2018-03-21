@@ -13,7 +13,7 @@ class PascalVOCGenerator(AbstractGenerator):
     SKIPPED_LABEL = 'Skip'
 
     def __init__(self, logger, config):
-        self._logger = logger(__name__)
+        super(PascalVOCGenerator, self).__init__(logger)
         self._labelbox_id = config['labelbox_id']
         self._project_name = config['project_name']
         self._json_labels = config['json_labels']
@@ -28,9 +28,7 @@ class PascalVOCGenerator(AbstractGenerator):
         self._image_ratio = config['image_ratio']
         self._apply_reduction = config['apply_reduction']
         self._debug = config['debug']
-
         self.label_names = set()
-
         self._execute()
 
     @property

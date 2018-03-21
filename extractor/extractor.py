@@ -13,8 +13,6 @@ class Extractor:
         self._required_img_width = kwargs['required_img_width']
         self._required_img_height = kwargs['required_img_height']
         self._annotation_type = kwargs['annotation_type']
-        #self._augment_images = kwargs['augment_images']
-        #self._randomize_entries = kwargs['randomize_entries']
 
         self._prepare_output_path()
         self._extract_labels_from_json(logger)
@@ -35,7 +33,6 @@ class Extractor:
         self._image_dir = os.path.join(self._output_path, 'images')
         self._annotation_dir = os.path.join(self._output_path, 'annotations')
         self._resized_dir = os.path.join(self._output_path, 'resized')
-        #self._augmented_dir = os.path.join(self._output_path, 'augmented')
 
         if not os.path.exists(self._output_path):
             os.makedirs(self._output_path)
@@ -59,12 +56,10 @@ class Extractor:
             'images_dir': self._image_dir,
             'output_dir': self._output_path,
             'resize_dir': self._resized_dir,
-            #'augmented_dir': self._augmented_dir,
             'annotations_dir': self._annotation_dir,
             'required_img_width': self._required_img_width,
             'required_img_height': self._required_img_height,
             'annotation_type': self._annotation_type,
-            #'augment_images': self._augment_images
         }
 
         json_parser = JSONParser(logger, **config)

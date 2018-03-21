@@ -10,9 +10,24 @@ from shapely import wkt
 from pascal_voc_writer import Writer as PascalWriter
 
 from .generator.pascal_voc import PascalVOCGenerator
+from .generator.ms_coco import MSCOCOGenerator
 
 
-class LabeledImage:
+class LabeledImagesMSCOCO:
+    """ Custom class matching returned json object of labelbox.io. """
+
+    def __init__(self, logger, *args, **kwargs):
+        self._logger = logger(__name__)
+        self._json_data = kwargs['json_data']
+        self._image_dir = kwargs['image_dir']
+        self._resized_image_dir = kwargs['resized_image_dir']
+        self._annotations_dir = kwargs['annotations_dir']
+        self._required_img_width = kwargs['required_image_width']
+        self._required_img_height = kwargs['required_image_height']
+        # TODO:Complete refactor
+
+
+class LabeledImagePascalVOC:
     """ Custom class matching returned json object of labelbox.io. """
 
     ANNOTATION_PASCAL_VOC = 'Pascal VOC'
@@ -36,6 +51,8 @@ class LabeledImage:
         self._file_name = self._source_img_url.rsplit('/', 1)[-1].split('.')[0]
         self._file_ext = '.' + \
             self._source_img_url.split("/")[-1].split('.')[1]
+        self._downloaded_images = []
+        self._resized_images = []
         self._download_image(kwargs['Label'])
         self._resize_image(self._image_file_path)
         self._generate_annotations(logger, kwargs['Label'])
@@ -111,8 +128,8 @@ class LabeledImage:
         if self._annotation_type == self.ANNOTATION_PASCAL_VOC:
             self._generate_pascal_voc_file(logger, json_labels, apply_reduction=True)
         elif self._annotation_type == self.ANNOTATION_COCO:
-            self._generate_coco_file(
-                json_labels, apply_reduction=True, debug=False)
+            self._generate_coco_file(logger,
+                                     json_labels, apply_reduction=True, debug=False)
         else:
             self._logger.error(
                 'Unknown annotation type : {}'.format(self._annotation_type))
@@ -153,8 +170,9 @@ class LabeledImage:
             })
         generator = PascalVOCGenerator(logger, config)
 
-    def _generate_coco_file(self, json_labels, apply_reduction=True, debug=False):
+    def _generate_coco_file(self, logger, json_labels, apply_reduction=True, debug=False):
         """ Transform WKT polygon to coco format. """
+
         coco = {
             'info': None,
             'images': [],

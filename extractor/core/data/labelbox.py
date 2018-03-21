@@ -120,41 +120,6 @@ class LabeledImage:
                 'Unknown annotation type : {}'.format(self._annotation_type))
             raise ValueError()
 
-    # TODO: Extract to training split on train / validation / test split
-    # def _generated_augmented_images(self, count=10, probability=0.02):
-    #     self._logger.info('Starting image random augmentation phase')
-
-    #     if self._required_img_height > 0 or self._required_img_width > 0:
-    #         source_dir = self._resized_image_dir
-    #     else:
-    #         source_dir = self._images_dir
-
-    #     pipeline = Augmentor.Pipeline(source_dir, self._augmented_dir)
-
-    #     pipeline.black_and_white(probability=probability, threshold=128)
-    #     pipeline.rotate(probability=probability,
-    #                     max_left_rotation=10, max_right_rotation=10)
-    #     pipeline.crop_centre(probability=probability, percentage_area=0.7)
-    #     pipeline.flip_left_right(probability=probability)
-    #     pipeline.flip_top_bottom(probability=probability)
-    #     pipeline.gaussian_distortion(
-    #         probability=probability, grid_width=20, grid_height=20,
-    #         magnitude=5, corner='bell', method='in')
-    #     pipeline.greyscale(probability=probability)
-    #     pipeline.random_distortion(
-    #         probability=probability, grid_width=8, grid_height=8, magnitude=10)
-    #     pipeline.random_erasing(probability=probability, rectangle_area=0.15)
-    #     pipeline.rotate_random_90(probability=probability)
-    #     pipeline.shear(probability=probability,
-    #                    max_shear_left=25, max_shear_right=25)
-    #     pipeline.skew(probability=probability, magnitude=1)
-    #     pipeline.zoom_random(probability=probability, percentage_area=0.8,
-    #                          randomise_percentage_area=True)
-
-    #   pipeline.sample(count)
-
-    #   self._logger.info('Execution of image augmentation was sucessfull')
-
     def _generate_pascal_voc_file(self, json_labels, apply_reduction=False, debug=False):
         """ Transform WKT polygon to pascal voc. """
         self._apply_reduction = apply_reduction

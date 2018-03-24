@@ -1,7 +1,8 @@
 import json
 import os
 
-from extractor.core.data.labelbox import LabeledImagePascalVOC, LabeledImagesCOCO
+from shapely import wkt
+from extractor.core.data.labelbox import LabeledImagePascalVOC  # , LabeledImagesCOCO
 
 
 class JSONParser:
@@ -21,14 +22,6 @@ class JSONParser:
         self._extract_json_from_file()
         self.parse_extracted_data_to_object(logger)
 
-    # def __repr__(self):
-    #     return (f'{self.__class__.__name__}('
-    #             f'{self._logger!r}, {self._json_file!r}, '
-    #             f'{self._images_dir!r}, {self._resized_dir!r}, '
-    #             f'{self._augmented_dir!r}, {self._annotations_dir!r}, '
-    #             f'{self._required_img_width!r}, {self._required_img_height!r}, '
-    #             f'{self._annotation_type!r}, {self._augment_images!r})')
-
     def __str__(self):
         return 'A json parser for file {}'.format(self._json_file)
 
@@ -38,6 +31,15 @@ class JSONParser:
         with open(self._json_file, 'r') as data_file:
             data = data_file.read()
             self._json_data = json.loads(data)
+
+            json_temp = []
+            for labels in self._json_data:
+                try:
+                    for label in labels.items():
+                        polygon = wkt.loads(label)
+                except:
+                    print('FUCKKKKKKKKKKKKKKKKKKKKKKKKKkkkk')
+
         self._logger.info(
             "Extracting data from json file completed with success.")
 
@@ -56,21 +58,35 @@ class JSONParser:
 
                 image = LabeledImagePascalVOC(logger, **entry)
                 labeled_imgs.append(image)
+
+            self._generate_label_map(labeled_imgs)
+            self._generate_file_map(labeled_imgs)
+
         elif self._annotation_type == 'COCO':
-            config = {
-                'json_data': self._json_data,
-                'image_dir': self._images_dir,
-                'resized_image_dir': self._resized_dir,
-                'annotations_dir': self._annotations_dir,
-                'required_image_width': self._required_img_width,
-                'required_image_height': self._required_img_height
-            }
-            images = LabeledImagesMSCOCO(logger, **config)
+            # TODO: Complete label map generation
+            raise NotImplementedError('COCO annotation extraction not yet completed')
+            # config = {
+            #     'json_data': self._json_data,
+            #     'image_dir': self._images_dir,
+            #     'resized_image_dir': self._resized_dir,
+            #     'annotations_dir': self._annotations_dir,
+            #     'required_image_width': self._required_img_width,
+            #     'required_image_height': self._required_img_height
+            # }
+            # images = LabeledImagesMSCOCO(logger, **config)
 
-        self.generate_label_map(labeled_imgs)
+    def _generate_file_map(self, labeled_images):
+        file_path = os.path.join(self._output_dir, 'trainval.txt')
 
-    # TODO: Complete label map generation
-    def generate_label_map(self, labeled_images):
+        file_names = []
+        for label in labeled_images:
+            file_names.append(label._file_name)
+
+        with open(file_path, 'w') as file_:
+            for file_name in file_names:
+                file_.write("{}\n".format(file_name))
+
+    def _generate_label_map(self, labeled_images):
 
         label_names = set()
         for label in labeled_images:
@@ -86,11 +102,12 @@ class JSONParser:
 
         for index, label_name in enumerate(label_names):
             first_line = 'item {\n'
-            second_line = '  id: {}\n'.format(index)
+            second_line = '  id: {}\n'.format(index + 1)
             third_line = '  name: \'{}\'\n'.format(label_name)
             fourth_line = '}\n'
 
-            data.append(first_line + second_line + third_line + fourth_line)
+            temp = first_line + second_line + third_line + fourth_line
+            data.append(temp)
 
         file_path = os.path.join(self._output_dir, 'label_map.pbtxt')
 

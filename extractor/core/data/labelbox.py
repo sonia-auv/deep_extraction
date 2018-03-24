@@ -51,8 +51,6 @@ class LabeledImagePascalVOC:
         self._file_name = self._source_img_url.rsplit('/', 1)[-1].split('.')[0]
         self._file_ext = '.' + \
             self._source_img_url.split("/")[-1].split('.')[1]
-        self._downloaded_images = []
-        self._resized_images = []
         self._download_image(kwargs['Label'])
         self._resize_image(self._image_file_path)
         self._generate_annotations(logger, kwargs['Label'])
@@ -126,7 +124,7 @@ class LabeledImagePascalVOC:
     def _generate_annotations(self, logger, json_labels):
         """ Handle different annotation type. """
         if self._annotation_type == self.ANNOTATION_PASCAL_VOC:
-            self._generate_pascal_voc_file(logger, json_labels, apply_reduction=True)
+            self._generate_pascal_voc_file(logger, json_labels, apply_reduction=True, debug=True)
         elif self._annotation_type == self.ANNOTATION_COCO:
             self._generate_coco_file(logger,
                                      json_labels, apply_reduction=True, debug=False)
@@ -169,6 +167,7 @@ class LabeledImagePascalVOC:
                 'image_ratio': 1
             })
         generator = PascalVOCGenerator(logger, config)
+        self.label_names.update(generator.label_names)
 
     def _generate_coco_file(self, logger, json_labels, apply_reduction=True, debug=False):
         """ Transform WKT polygon to coco format. """

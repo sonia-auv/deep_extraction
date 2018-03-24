@@ -46,9 +46,6 @@ class Extractor:
         if not os.path.exists(self._resized_dir):
             os.makedirs(self._resized_dir)
 
-        # if self._augment_images and not os.path.exists(self._augmented_dir):
-        #   os.makedirs(self._augmented_dir)
-
     def _extract_labels_from_json(self, logger):
 
         config = {

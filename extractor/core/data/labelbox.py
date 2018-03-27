@@ -10,7 +10,6 @@ from shapely import wkt
 from pascal_voc_writer import Writer as PascalWriter
 
 from .generator.pascal_voc import PascalVOCGenerator
-from .generator.ms_coco import MSCOCOGenerator
 
 
 class LabeledImagesMSCOCO:
@@ -21,10 +20,8 @@ class LabeledImagesMSCOCO:
         self._json_data = kwargs['json_data']
         self._image_dir = kwargs['image_dir']
         self._resized_image_dir = kwargs['resized_image_dir']
-        self._annotations_dir = kwargs['annotations_dir']
         self._required_img_width = kwargs['required_image_width']
         self._required_img_height = kwargs['required_image_height']
-        # TODO:Complete refactor
 
 
 class LabeledImagePascalVOC:
@@ -53,7 +50,7 @@ class LabeledImagePascalVOC:
             self._source_img_url.split("/")[-1].split('.')[1]
         self._download_image(kwargs['Label'])
         self._resize_image(self._image_file_path)
-        self._generate_annotations(logger, kwargs['Label'])
+        self._generate_pascal_voc_file(logger, kwargs['Label'], apply_reduction=True, debug=True)
 
     def _download_image(self, json_labels):
         """ Download image from provided link (Cloud link)."""
@@ -121,18 +118,6 @@ class LabeledImagePascalVOC:
             self._logger.warn('WARN: Skipping file resizing since it already exist @ {}\n'.format(
                 self._resized_image_path))
 
-    def _generate_annotations(self, logger, json_labels):
-        """ Handle different annotation type. """
-        if self._annotation_type == self.ANNOTATION_PASCAL_VOC:
-            self._generate_pascal_voc_file(logger, json_labels, apply_reduction=True, debug=True)
-        elif self._annotation_type == self.ANNOTATION_COCO:
-            self._generate_coco_file(logger,
-                                     json_labels, apply_reduction=True, debug=False)
-        else:
-            self._logger.error(
-                'Unknown annotation type : {}'.format(self._annotation_type))
-            raise ValueError()
-
     def _generate_pascal_voc_file(self, logger, json_labels, apply_reduction=False, debug=False):
         """ Transform WKT polygon to pascal voc. """
         config = {
@@ -168,119 +153,6 @@ class LabeledImagePascalVOC:
             })
         generator = PascalVOCGenerator(logger, config)
         self.label_names.update(generator.label_names)
-
-    def _generate_coco_file(self, logger, json_labels, apply_reduction=True, debug=False):
-        """ Transform WKT polygon to coco format. """
-
-        coco = {
-            'info': None,
-            'images': [],
-            'annotations': [],
-            'licenses': [],
-            'categories': []
-        }
-
-        coco['info'] = {
-            'year': dt.datetime.now().year,
-            'version': None,
-            'description': self._project_name,
-            'contributor': self._created_by,
-            'url': 'labelbox.io',
-            'date_created': dt.datetime.now().isoformat()
-        }
-
-        image = {
-            "id": self._id,
-            "file_name": self._file_name,
-            "license": None,
-            "flickr_url": self._source_img_url,
-            "coco_url": self._source_img_url,
-            "date_captured": None,
-        }
-
-        if apply_reduction:
-            image.update({
-                "width": self._required_img_width,
-                "height": self._required_img_height,
-            })
-        else:
-            image.update({
-                "width": self._img_width,
-                "height": self._img_height,
-            })
-
-        coco['images'].append(image)
-
-        for label_name, polygon in json_labels.items():
-            try:
-                # check if label category exists in 'categories' field
-                label_id = [c['id'] for c in coco['categories']
-                            if c['supercategory'] == label_name][0]
-            except IndexError as e:
-                label_id = len(coco['categories']) + 1
-                category = {
-                    'supercategory': label_name,
-                    'id': len(coco['categories']) + 1,
-                    'name': label_name
-                }
-                coco['categories'].append(category)
-
-            multi_polygons = wkt.loads(polygon)
-            for m in multi_polygons:
-                segmentation = []
-                for x, y in m.exterior.coords:
-                    if apply_reduction:
-                        segmentation.extend(
-                            [x * self._ratio, self._required_img_height - y * self._ratio - self._bottom_border])
-                    else:
-                        segmentation.extend([x, self._img_height-y])
-
-                annotation = {
-                    "id": len(coco['annotations']) + 1,
-                    "image_id": self._id,
-                    "category_id": label_name,
-                    "segmentation": [segmentation],
-                    "iscrowd": 0,
-                }
-
-                if apply_reduction:
-                    annotation.update({
-                        "area": m.area * self._ratio,
-                        "bbox": [m.bounds[0] * self._ratio, m.bounds[1] * self._ratio,
-                                 (m.bounds[2]-m.bounds[0]) * self._ratio,
-                                 (m.bounds[3]-m.bounds[1]) * self._ratio],
-
-                    })
-                else:
-                    annotation.update({
-                        "area": m.area,  # float
-                        "bbox": [m.bounds[0], m.bounds[1],
-                                 m.bounds[2]-m.bounds[0],
-                                 m.bounds[3]-m.bounds[1]],
-                    })
-
-                if debug:
-                    image = cv2.imread(self._resized_image_path)
-                    top_xy = (int(segmentation[2]), int(segmentation[3]))
-                    bottom_xy = (int(segmentation[6]), int(segmentation[7]))
-                    self.show_bounding_box(image, top_xy, bottom_xy)
-
-                coco['annotations'].append(annotation)
-
-        file_name = '{}.json'.format(self._file_name)
-        coco_path = os.path.join(self._annotations_dir, 'coco')
-        if not os.path.exists(coco_path):
-            os.mkdir(coco_path)
-        coco_file = os.path.join(coco_path, file_name)
-
-        if not os.path.exists(coco_file):
-            with open(coco_file, 'w+') as coco_file:
-                coco_file.write(json.dumps(coco))
-            self._logger.info(
-                'Coco annotation file has been created at {}\n'.format(str(coco_file)))
-        else:
-            self._logger.warning(
-                'WARN: Skipping file creation since it already exist at {}\n'.format(coco_file))
 
     def show_bounding_box(self, image, top_xy, bottom_xy):
         cv2.rectangle(image, top_xy, bottom_xy, (0, 255, 0), 1)

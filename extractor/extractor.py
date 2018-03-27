@@ -12,17 +12,9 @@ class Extractor:
         self._output_path = kwargs['output_path']
         self._required_img_width = kwargs['required_img_width']
         self._required_img_height = kwargs['required_img_height']
-        self._annotation_type = kwargs['annotation_type']
 
         self._prepare_output_path()
         self._extract_labels_from_json(logger)
-
-    # def __repr__(self):
-    #     return (f'{self.__class__.__name__}('
-    #             f'{self._json_file!r}, {self._output_path!r}, '
-    #             f'{self._output_path!r}, {self._required_img_width!r}, '
-    #             f'{self._required_img_height!r}, {self._annotation_type!r}, '
-    #             f'{self._augment_images!r}, {self._randomize_entries!r})')
 
     def __str__(self):
         return 'An labebox.io object extractor with output path {}'.format(self._output_path)
@@ -56,7 +48,6 @@ class Extractor:
             'annotations_dir': self._annotation_dir,
             'required_img_width': self._required_img_width,
             'required_img_height': self._required_img_height,
-            'annotation_type': self._annotation_type,
         }
 
         json_parser = JSONParser(logger, **config)

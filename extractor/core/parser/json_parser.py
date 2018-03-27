@@ -17,7 +17,6 @@ class JSONParser:
         self._annotations_dir = kwargs['annotations_dir']
         self._required_img_width = kwargs['required_img_width']
         self._required_img_height = kwargs['required_img_height']
-        self._annotation_type = kwargs['annotation_type']
 
         self._extract_json_from_file()
         self.parse_extracted_data_to_object(logger)
@@ -32,14 +31,6 @@ class JSONParser:
             data = data_file.read()
             self._json_data = json.loads(data)
 
-            json_temp = []
-            for labels in self._json_data:
-                try:
-                    for label in labels.items():
-                        polygon = wkt.loads(label)
-                except:
-                    print('FUCKKKKKKKKKKKKKKKKKKKKKKKKKkkkk')
-
         self._logger.info(
             "Extracting data from json file completed with success.")
 
@@ -47,33 +38,18 @@ class JSONParser:
         self._logger.info('Parsing extracted data to generate custom object.')
         labeled_imgs = []
 
-        if self._annotation_type == 'Pascal VOC':
-            for entry in self._json_data:
-                entry['Images Dir'] = self._images_dir
-                entry['Annotations Dir'] = self._annotations_dir
-                entry['Required Image Width'] = self._required_img_width
-                entry['Required Image Height'] = self._required_img_height
-                entry['Annotation Type'] = self._annotation_type
-                entry['Resized Image Dir'] = self._resized_dir
+        for entry in self._json_data:
+            entry['Images Dir'] = self._images_dir
+            entry['Annotations Dir'] = self._annotations_dir
+            entry['Required Image Width'] = self._required_img_width
+            entry['Required Image Height'] = self._required_img_height
+            entry['Resized Image Dir'] = self._resized_dir
 
-                image = LabeledImagePascalVOC(logger, **entry)
-                labeled_imgs.append(image)
+            image = LabeledImagePascalVOC(logger, **entry)
+            labeled_imgs.append(image)
 
-            self._generate_label_map(labeled_imgs)
-            self._generate_file_map(labeled_imgs)
-
-        elif self._annotation_type == 'COCO':
-            # TODO: Complete label map generation
-            raise NotImplementedError('COCO annotation extraction not yet completed')
-            # config = {
-            #     'json_data': self._json_data,
-            #     'image_dir': self._images_dir,
-            #     'resized_image_dir': self._resized_dir,
-            #     'annotations_dir': self._annotations_dir,
-            #     'required_image_width': self._required_img_width,
-            #     'required_image_height': self._required_img_height
-            # }
-            # images = LabeledImagesMSCOCO(logger, **config)
+        self._generate_label_map(labeled_imgs)
+        self._generate_file_map(labeled_imgs)
 
     def _generate_file_map(self, labeled_images):
         file_path = os.path.join(self._output_dir, 'trainval.txt')

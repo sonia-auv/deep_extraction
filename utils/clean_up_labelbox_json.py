@@ -66,9 +66,6 @@ def get_stats_from_json_file(json_file_path):
         with open('correct.json', 'r') as data_file:
             correct_data = json.load(data_file)
 
-        import IPython
-        IPython.embed()
-
 
 if __name__ == '__main__':
     parsed_args = parse_args()

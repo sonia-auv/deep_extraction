@@ -18,11 +18,8 @@ class PascalVOCGenerator(AbstractGenerator):
         self._image_path = config['image_path']
         self._image_width = config['image_width']
         self._image_height = config['image_height']
-        self._top_border = config['top_border']
-        self._bottom_border = config['bottom_border']
-        self._left_border = config['left_border']
-        self._right_border = config['right_border']
-        self._image_ratio = config['image_ratio']
+        self._x_factor = config['x_factor']
+        self._y_factor = config['y_factor']
         self._apply_reduction = config['apply_reduction']
         self.label_names = set()
         self._execute()
@@ -50,13 +47,14 @@ class PascalVOCGenerator(AbstractGenerator):
 
     def _create_pascal_writer(self):
         """ Create an instance of pascal writer."""
-        import IPython
-        IPython.embed()
         return PascalWriter(
             path=self._image_path,
             width=self._image_width,
             height=self._image_height,
             database=self._project_name)
+
+    def _transform_to_format(self):
+        pass
 
     def _parse_label(self):
         """ Parse labels and extract. """
@@ -71,7 +69,7 @@ class PascalVOCGenerator(AbstractGenerator):
                     x, y = self._resize_coords(coords['x'], coords['y'])
                 else:
                     x = int(coords['x'])
-                    y = int(coords['y'])
+                    y = self._image_height - int(coords['y'])
 
                 xy_coords.extend([x, y])
 
@@ -91,31 +89,31 @@ class PascalVOCGenerator(AbstractGenerator):
                 'WARN: Skipping file creation since it already exist at {}\n'.format(self._xml_file_path))
 
     def _resize_coords(self, x, y):
-        horizontal_border_max = max(self._top_border, self._bottom_border)
-        vertical_border_max = max(self._left_border, self._right_border)
 
-        new_x = int(x * self._image_ratio)
-        new_y = int(y * self._image_ratio)
-
+        new_x = int(x / self._x_factor) - 40
+        new_y = self._image_height - int(y / self._y_factor) - 12
         return new_x, new_y
 
     def _debug_bounding_box(self, xy_coords, label):
         image = cv2.imread(self._image_path)
 
-        value = 4
+        value = 0
 
         top_left = [xy_coords[0] - value, xy_coords[1] - value]
         bottom_left = [xy_coords[2] - value, xy_coords[3] + value]
-        top_right = [xy_coords[4] + value, xy_coords[5] - value]
-        bottom_right = [xy_coords[6] + value, xy_coords[7] + value]
+        bottom_right = [xy_coords[4] + value, xy_coords[5] + value]
+        top_right = [xy_coords[6] + value, xy_coords[7] - value]
 
         top_xy = tuple(top_left)
         bottom_xy = tuple(bottom_right)
 
-        cv2.rectangle(image, top_xy, bottom_xy, (0, 255, 0), 1)
-        cv2.imshow('Bounding box', image)
-        cv2.waitKey(1000)
-        cv2.destroyAllWindows()
+        img = cv2.rectangle(image, top_xy, bottom_xy, (0, 255, 0), 1)
+        base_name = os.path.basename(self._image_path)
+        file_name = os.path.join('/home/spark/Desktop/test/', base_name)
+        #cv2.imshow('Bounding box', image)
+        cv2.imwrite(file_name, img)
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
 
     def _execute(self):
         """ Execute JSON to Pascal VOC conversion. """

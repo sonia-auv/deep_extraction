@@ -43,7 +43,6 @@ class LabeledImagePascalVOC:
         self._annotations_dir = kwargs['Annotations Dir']
         self._required_img_height = kwargs['Required Image Height']
         self._required_img_width = kwargs['Required Image Width']
-        self._annotation_type = kwargs['Annotation Type']
         self.label_names = set()
         self._file_name = self._source_img_url.rsplit('/', 1)[-1].split('.')[0]
         self._file_ext = '.' + \
@@ -84,34 +83,54 @@ class LabeledImagePascalVOC:
         self._resized_image_path = os.path.join(
             self._resized_image_dir, file_name)
 
-        image = cv2.imread(image_path)
-        # old_size is in (height, width) format
-        original_size = image.shape[:2]
-        required_size = max(self._required_img_height,
-                            self._required_img_width)
+        img = cv2.imread(image_path)
 
-        self._ratio = float(required_size)/max(original_size)
-        self._new_size = tuple([int(x*self._ratio) for x in original_size])
+        height, width = img.shape[:2]
+        scaled_height = 300
+        scaled_width = 300
 
-        # new_size should be in (width, height) format
-        image = cv2.resize(image, (self._new_size[1], self._new_size[0]))
+        # interpolation method
+        if height > scaled_height or scaled_width > scaled_width:  # shrinking image
+            interp = cv2.INTER_AREA
+        else:  # stretching image
+            interp = cv2.INTER_CUBIC
 
-        delta_w = required_size - self._new_size[1]
-        delta_h = required_size - self._new_size[0]
+        # aspect ratio of image
+        aspect = float(width)/height
 
-        self._top_border, self._bottom_border = delta_h//2, delta_h - \
-            (delta_h//2)
-        self._left_border, self._right_border = delta_w//2, delta_w - \
-            (delta_w//2)
+        # factors to scale bounding box values
+        self._x_factor = width / scaled_width
+        self._y_factor = height / scaled_height
+
+        # compute scaling and pad sizing
+        if aspect > 1:  # horizontal image
+            new_width = scaled_width
+            new_height = np.round(new_width/aspect).astype(int)
+            pad_vert = (scaled_height-new_height)/2
+            pad_top, pad_bot = np.floor(pad_vert).astype(int), np.ceil(pad_vert).astype(int)
+            pad_left, pad_right = 0, 0
+        elif aspect < 1:  # vertical image
+            new_height = scaled_height
+            new_width = np.round(new_height*aspect).astype(int)
+            pad_horz = (scaled_width-new_width)/2
+            pad_left, pad_right = np.floor(pad_horz).astype(int), np.ceil(pad_horz).astype(int)
+            pad_top, pad_bot = 0, 0
+        else:  # square image
+            new_height, new_width = scaled_height, scaled_width
+            pad_left, pad_right, pad_top, pad_bot = 0, 0, 0, 0
+
+        # set pad color
+        # color image but only one color provided
+        if len(img.shape) is 3 and not isinstance(0, (list, tuple, np.ndarray)):
+            padColor = [0]*3
+
+        # scale and pad
+        scaled_img = cv2.resize(img, (new_width, new_height), interpolation=interp)
+        scaled_img = cv2.copyMakeBorder(
+            scaled_img, pad_top, pad_bot, pad_left, pad_right, borderType=cv2.BORDER_CONSTANT, value=0)
 
         if not os.path.exists(self._resized_image_path):
-            color = [0, 0, 0]
-            new_image = cv2.copyMakeBorder(image,
-                                           self._top_border, self._bottom_border,
-                                           self._left_border, self._right_border,
-                                           cv2.BORDER_CONSTANT, value=color)
-
-            cv2.imwrite(self._resized_image_path, new_image)
+            cv2.imwrite(self._resized_image_path, scaled_img)
             self._logger.info('Resized image at {}.jpg'.format(
                 self._resized_image_path))
         else:
@@ -134,22 +153,16 @@ class LabeledImagePascalVOC:
                 'image_path': self._resized_image_path,
                 'image_width': self._required_img_width,
                 'image_height': self._required_img_height,
-                'top_border': self._top_border,
-                'bottom_border': self._bottom_border,
-                'left_border': self._left_border,
-                'right_border': self._right_border,
-                'image_ratio': self._ratio
+                'x_factor': self._x_factor,
+                'y_factor': self._y_factor,
             })
         else:
             config.update({
                 'image_path': self._image_file_path,
                 'image_width': self._img_width,
                 'image_height': self._img_height,
-                'top_border': None,
-                'bottom_border': None,
-                'left_border': None,
-                'right_border': None,
-                'image_ratio': 1
+                'x_factor': 1,
+                'y_factor': 1,
             })
         generator = PascalVOCGenerator(logger, config)
         self.label_names.update(generator.label_names)

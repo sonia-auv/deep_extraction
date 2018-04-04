@@ -20,6 +20,8 @@ class PascalVOCGenerator(AbstractGenerator):
         self._image_height = config['image_height']
         self._x_factor = config['x_factor']
         self._y_factor = config['y_factor']
+        self._pad_top = config['pad_top']
+        self._pad_left = config['pad_left']
         self._apply_reduction = config['apply_reduction']
         self.label_names = set()
         self._execute()
@@ -83,15 +85,15 @@ class PascalVOCGenerator(AbstractGenerator):
         if os.path.exists(self._annotation_file_path):
             xml_writer.save(self._xml_file_path)
             # self._logger.info(
-            #    'Pascal VOC annotation file create for image {}.\n\n'.format(self._file_name))
+            #     'Pascal VOC annotation file create for image {}.\n\n'.format(self._file_name))
         else:
             self._logger.warning(
                 'WARN: Skipping file creation since it already exist at {}\n'.format(self._xml_file_path))
 
     def _resize_coords(self, x, y):
 
-        new_x = int(x / self._x_factor) - 40
-        new_y = self._image_height - int(y / self._y_factor) - 12
+        new_x = int(x / self._x_factor)
+        new_y = self._image_height - int(y / self._y_factor) - self._pad_top
         return new_x, new_y
 
     def _debug_bounding_box(self, xy_coords, label):
@@ -99,18 +101,14 @@ class PascalVOCGenerator(AbstractGenerator):
 
         value = 0
 
-        top_left = [xy_coords[0] - value, xy_coords[1] - value]
-        bottom_left = [xy_coords[2] - value, xy_coords[3] + value]
-        bottom_right = [xy_coords[4] + value, xy_coords[5] + value]
-        top_right = [xy_coords[6] + value, xy_coords[7] - value]
-
-        top_xy = tuple(top_left)
-        bottom_xy = tuple(bottom_right)
+        top_xy = tuple([xy_coords[0] - value, xy_coords[1] - value])
+        bottom_xy = tuple([xy_coords[4] + value, xy_coords[5] + value])
 
         img = cv2.rectangle(image, top_xy, bottom_xy, (0, 255, 0), 1)
+
         base_name = os.path.basename(self._image_path)
         file_name = os.path.join('/home/spark/Desktop/test/', base_name)
-        #cv2.imshow('Bounding box', image)
+       # cv2.imshow('Bounding box', image)
         cv2.imwrite(file_name, img)
         # cv2.waitKey(0)
         # cv2.destroyAllWindows()

@@ -86,38 +86,42 @@ class LabeledImagePascalVOC:
         img = cv2.imread(image_path)
 
         height, width = img.shape[:2]
+
+        self._aspect_ratio = float(width)/height
+
         scaled_height = 300
         scaled_width = 300
 
         # interpolation method
-        if height > scaled_height or scaled_width > scaled_width:  # shrinking image
+        if height > self._required_img_height or width > self._required_img_width:  # shrinking image
             interp = cv2.INTER_AREA
         else:  # stretching image
             interp = cv2.INTER_CUBIC
 
         # aspect ratio of image
-        aspect = float(width)/height
-
-        # factors to scale bounding box values
-        self._x_factor = width / scaled_width
-        self._y_factor = height / scaled_height
 
         # compute scaling and pad sizing
-        if aspect > 1:  # horizontal image
+        if self._aspect_ratio > 1:  # horizontal image
             new_width = scaled_width
-            new_height = np.round(new_width/aspect).astype(int)
+            new_height = np.round(new_width/self._aspect_ratio).astype(int)
             pad_vert = (scaled_height-new_height)/2
-            pad_top, pad_bot = np.floor(pad_vert).astype(int), np.ceil(pad_vert).astype(int)
-            pad_left, pad_right = 0, 0
-        elif aspect < 1:  # vertical image
+            self._pad_top, self._pad_bot = np.floor(
+                pad_vert).astype(int), np.ceil(pad_vert).astype(int)
+            self._pad_left, self._pad_right = 0, 0
+        elif self._aspect_ratio < 1:  # vertical image
             new_height = scaled_height
-            new_width = np.round(new_height*aspect).astype(int)
+            new_width = np.round(new_height*self._aspect_ratio).astype(int)
             pad_horz = (scaled_width-new_width)/2
-            pad_left, pad_right = np.floor(pad_horz).astype(int), np.ceil(pad_horz).astype(int)
-            pad_top, pad_bot = 0, 0
+            self._pad_left, self._pad_right = np.floor(
+                pad_horz).astype(int), np.ceil(pad_horz).astype(int)
+            self._pad_top, self._pad_bot = 0, 0
         else:  # square image
             new_height, new_width = scaled_height, scaled_width
-            pad_left, pad_right, pad_top, pad_bot = 0, 0, 0, 0
+            self._pad_left, self._pad_right, self._pad_top, self._pad_bot = 0, 0, 0, 0
+
+        # factors to scale bounding box values
+        self._x_factor = float(width) / self._required_img_width
+        self._y_factor = float(height) / (self._required_img_height - self._pad_bot - self._pad_top)
 
         # set pad color
         # color image but only one color provided
@@ -127,7 +131,7 @@ class LabeledImagePascalVOC:
         # scale and pad
         scaled_img = cv2.resize(img, (new_width, new_height), interpolation=interp)
         scaled_img = cv2.copyMakeBorder(
-            scaled_img, pad_top, pad_bot, pad_left, pad_right, borderType=cv2.BORDER_CONSTANT, value=0)
+            scaled_img, self._pad_top, self._pad_bot, self._pad_left, self._pad_right, borderType=cv2.BORDER_CONSTANT, value=0)
 
         if not os.path.exists(self._resized_image_path):
             cv2.imwrite(self._resized_image_path, scaled_img)
@@ -155,6 +159,8 @@ class LabeledImagePascalVOC:
                 'image_height': self._required_img_height,
                 'x_factor': self._x_factor,
                 'y_factor': self._y_factor,
+                'pad_top': self._pad_top,
+                'pad_left': self._pad_left,
             })
         else:
             config.update({
@@ -163,12 +169,8 @@ class LabeledImagePascalVOC:
                 'image_height': self._img_height,
                 'x_factor': 1,
                 'y_factor': 1,
+                'pad_top': 0,
+                'pad_left': 0,
             })
         generator = PascalVOCGenerator(logger, config)
         self.label_names.update(generator.label_names)
-
-    def show_bounding_box(self, image, top_xy, bottom_xy):
-        cv2.rectangle(image, top_xy, bottom_xy, (0, 255, 0), 1)
-        cv2.imshow('Bounding box', image)
-        cv2.waitKey(1000)
-        cv2.destroyAllWindows()

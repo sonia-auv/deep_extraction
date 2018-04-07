@@ -104,14 +104,22 @@ class PascalVOCGenerator(AbstractGenerator):
         top_xy = tuple([xy_coords[0] - value, xy_coords[1] - value])
         bottom_xy = tuple([xy_coords[4] + value, xy_coords[5] + value])
 
+        font = cv2.FONT_HERSHEY_SIMPLEX
+
         img = cv2.rectangle(image, top_xy, bottom_xy, (0, 255, 0), 1)
+        img = cv2.putText(img, label, (20, 30),
+                          font, 1, (0, 255, 0), 2, cv2.LINE_AA)
 
         base_name = os.path.basename(self._image_path)
-        file_name = os.path.join('/home/spark/Desktop/test/', base_name)
-       # cv2.imshow('Bounding box', image)
+
+        render_folder = os.path.join(os.path.split(self._annotation_dir)[0], 'render')
+
+        if not os.path.exists(render_folder):
+            os.mkdir(render_folder)
+
+        file_name = os.path.join(render_folder, base_name)
+
         cv2.imwrite(file_name, img)
-        # cv2.waitKey(0)
-        # cv2.destroyAllWindows()
 
     def _execute(self):
         """ Execute JSON to Pascal VOC conversion. """

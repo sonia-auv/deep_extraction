@@ -1,7 +1,7 @@
 import json
 import os
 
-from shapely import wkt
+#from shapely import wkt
 from extractor.core.data.labelbox import LabeledImagePascalVOC  # , LabeledImagesCOCO
 
 

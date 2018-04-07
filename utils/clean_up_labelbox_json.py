@@ -9,64 +9,74 @@ def parse_args():
 
     args_parser = argparse.ArgumentParser()
 
-    args_parser.add_argument('-f', '--json_file_path',
+    args_parser.add_argument('-i', '--input_json_file',
                              default=None,
-                             dest='json_file_path',
+                             dest='input_json_file',
                              type=str,
                              required=True,
-                             help='Path to json file containing label data')
+                             help='Path to json file containing raw label data')
+
+    args_parser.add_argument('-o', '--output_json_file',
+                             default=None,
+                             dest='output_json_file',
+                             type=str,
+                             required=True,
+                             help='Path to output json file containing screened label data')
 
     return args_parser.parse_args()
 
 
-def get_stats_from_json_file(json_file_path):
-    with open(json_file_path, 'r') as json_file:
-        correct_images = []
-        data = json.load(json_file)
+def get_stats_from_json_file(input_json_file, output_json_file):
+    with open(input_json_file, 'r') as json_file:
+        parsed_json = []
+        json_data = json.load(json_file)
 
-        correct = 0
-        error = 0
-        skipped = 0
-        total = 0
-
-        for image in data:
-            correct_img = True
-            labels = image['Label']
-            total += 1
+        for entry in json_data:
+            labels = entry['Label']
             if labels != 'Skip':
-                for k, v in labels.iteritems():
-                    if v[0]:
-                        points = v[0]
-                        if len(points) == 4:
-                            correct += 1
-                        else:
-                            error += 1
-                            correct_img = False
+                for label_name, points in labels.iteritems():
+                    points = points[0]
+                    xy_coords = []
+                    remove_label = []
+                    for point in points:
+                        xy_coords.extend([point['x'], point['y']])
+
+                    if len(xy_coords) < 8 or len(xy_coords) > 8:
+                        remove_label.append(label_name)
                     else:
-                        error += 1
-                        correct_img = False
-                        # continue
-            else:
-                correct_img = False
-                skipped += 1
 
-            if correct_img == True:
-                correct_images.append(image)
+                        top_left_x = xy_coords[0]
+                        top_left_y = xy_coords[1]
 
-        correct_total = correct / total
-        error_total = error / total
-        skipped_total = skipped / total
-        print('Correct:{}%'.format(correct_total))
-        print('Error:{}'.format(error_total))
-        print('Skipped:{}'.format(skipped_total))
+                        bottom_left_x = xy_coords[2]
+                        bottom_left_y = xy_coords[3]
 
-        with open('correct.json', 'w') as json_file:
-            json.dump(correct_images, json_file)
+                        bottom_right_x = xy_coords[4]
+                        bottom_right_y = xy_coords[5]
 
-        with open('correct.json', 'r') as data_file:
-            correct_data = json.load(data_file)
+                        top_right_x = xy_coords[6]
+                        top_right_y = xy_coords[7]
+
+                        left_x = top_left_x == bottom_left_x
+                        right_x = top_right_x == bottom_right_x
+                        top_y = top_left_y == top_right_y
+                        bottom_y = bottom_left_y == bottom_right_y
+
+                        print(left_x, right_x, top_y, bottom_y)
+                        if not all([left_x, right_x, top_y, bottom_y]):
+                            remove_label.append(label_name)
+
+                for label in remove_label:
+                    entry['Label'].pop(label)
+
+                parsed_json.append(entry)
+
+        with open(output_json_file, 'w') as new_json_file:
+            json.dump(parsed_json, new_json_file)
 
 
 if __name__ == '__main__':
     parsed_args = parse_args()
-    get_stats_from_json_file(parsed_args.json_file_path)
+    input_json_file = parsed_args.input_json_file
+    output_json_file = parsed_args.output_json_file
+    get_stats_from_json_file(input_json_file, output_json_file)

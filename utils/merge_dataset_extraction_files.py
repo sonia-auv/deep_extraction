@@ -58,7 +58,7 @@ def extract_json_from_files(json_files):
     for file_ in json_files:
         with open(file_, 'r') as json_file:
             data = json.load(json_file)
-            json_data.append(data)
+            json_data.extend(data)
 
     return json_data
 

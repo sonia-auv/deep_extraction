@@ -17,19 +17,26 @@ class Main():
 
         args_parser = argparse.ArgumentParser()
 
-        args_parser.add_argument('-f', '--json_file_path',
+        args_parser.add_argument('-f', '--json_file_dir',
                                  default=None,
-                                 dest='json_file_path',
+                                 dest='json_file_dir',
                                  type=str,
                                  required=True,
                                  help='Path to json file containing label data')
 
-        args_parser.add_argument('-o', '--output_path',
+        args_parser.add_argument('-o', '--output_dir',
                                  default=None,
-                                 dest='output_path',
+                                 dest='output_dir',
                                  type=str,
                                  required=True,
                                  help='Path to destination directory where images and bounding box are created')
+
+        args_parser.add_argument('-d', '--detection_dir',
+                                 default=None,
+                                 dest='detection_dir',
+                                 type=str,
+                                 required=False,
+                                 help='Path to base base deep_detection directory')
 
         args_parser.add_argument('-iw', '--required_img_width',
                                  default=300,
@@ -52,8 +59,9 @@ class Main():
         parsed_args = self.parse_args()
 
         extractor = Extractor(logger=create_logger,
-                              json_file=parsed_args.json_file_path,
-                              output_path=parsed_args.output_path,
+                              json_file=parsed_args.json_file_dir,
+                              output_dir=parsed_args.output_dir,
+                              detection_dir=parsed_args.detection_dir,
                               required_img_width=parsed_args.required_img_width,
                               required_img_height=parsed_args.required_img_height,)
 

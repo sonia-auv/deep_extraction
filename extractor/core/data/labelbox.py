@@ -12,23 +12,10 @@ from pascal_voc_writer import Writer as PascalWriter
 from .generator.pascal_voc import PascalVOCGenerator
 
 
-class LabeledImagesMSCOCO:
-    """ Custom class matching returned json object of labelbox.io. """
-
-    def __init__(self, logger, *args, **kwargs):
-        self._logger = logger(__name__)
-        self._json_data = kwargs['json_data']
-        self._image_dir = kwargs['image_dir']
-        self._resized_image_dir = kwargs['resized_image_dir']
-        self._required_img_width = kwargs['required_image_width']
-        self._required_img_height = kwargs['required_image_height']
-
-
 class LabeledImagePascalVOC:
     """ Custom class matching returned json object of labelbox.io. """
 
     ANNOTATION_PASCAL_VOC = 'Pascal VOC'
-    ANNOTATION_COCO = 'COCO'
     SKIPPED_LABEL = 'Skip'
 
     def __init__(self, logger, *args, **kwargs):

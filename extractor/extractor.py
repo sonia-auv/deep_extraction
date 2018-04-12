@@ -26,7 +26,11 @@ class Extractor:
 
     @property
     def _detection_annotation_dir(self):
-        return os.path.join(self._detection_dir, 'annotations')
+        return os.path.join(self._detection_dir, 'dataset', 'annotations')
+
+    @property
+    def _detection_image_dir(self):
+        return os.path.join(self._detection_dir, 'dataset', 'images')
 
     def _prepare_output_path(self):
         """ Prepare output folder to receive images and bounding box data. """
@@ -62,6 +66,7 @@ class Extractor:
         json_parser = JSONParser(logger, **config)
 
     def _copy_annotation_to_deep_detection(self):
+        # TODO:Refactor
         """ Copy annotation xml and trainval files and labelmap.pbtxt to deep_detection."""
         label_map_src = os.path.join(self._output_dir, 'label_map.pbtxt')
         label_map_dest = os.path.join(self._detection_annotation_dir, 'label_map.pbtxt')
@@ -72,14 +77,14 @@ class Extractor:
         annotations_files = glob(os.path.join(self._annotation_dir, 'pascal_voc', '*.xml'))
 
         if os.path.exists(self._detection_dir):
-            if os.path.exists(os.path.join(self._detection_dir, 'annotations')):
+            if os.path.exists(os.path.join(self._detection_annotation_dir)):
                 shutil.copyfile(label_map_src, label_map_dest)
                 shutil.copyfile(train_val_src, train_val_dest)
 
-                annotation_dir_dest = os.path.join(self._detection_annotation_dir, 'xmls')
+                annotation_dir_dest = os.path.join(self._detection_annotation_dir, 'pascal_voc')
 
                 if os.path.exists(annotation_dir_dest):
-                    filelist = glob(os.path.join(os.path.join(annotation_dir_dest, '*')))
+                    filelist = glob(os.path.join(os.path.join(annotation_dir_dest, '*.xml')))
                     for f in filelist:
                         os.remove(f)
 
@@ -91,19 +96,20 @@ class Extractor:
                         shutil.copyfile(annotation_file, new_annotation_file)
 
     def _copy_resized_images_to_deep_detection(self):
+        # TODO:Refactor
         """ Copy resized images to deep_detection. """
         resized_image_files = glob(os.path.join(self._resized_dir, '*.jpg'))
 
         resized_image_files_dest = os.path.join(self._detection_dir, 'images')
 
-        if os.path.exists(resized_image_files_dest):
-            filelist = glob(os.path.join(os.path.join(resized_image_files_dest, '*')))
+        if os.path.exists(self._detection_image_dir):
+            filelist = glob(os.path.join(self._detection_image_dir, '*.jpg'))
             for f in filelist:
                 os.remove(f)
 
             for reized_image in resized_image_files:
                 file_name = os.path.basename(reized_image)
-                new_resized_image = os.path.join(self._detection_dir, 'images', file_name)
+                new_resized_image = os.path.join(self._detection_image_dir, file_name)
                 self._logger.info('Copying image file {} to {}'.format(
                     reized_image, new_resized_image))
                 shutil.copyfile(reized_image, new_resized_image)

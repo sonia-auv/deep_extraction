@@ -124,8 +124,6 @@ class PascalVOCGenerator(AbstractGenerator):
     def _execute(self):
         """ Execute JSON to Pascal VOC conversion. """
         if self._json_labels != self.SKIPPED_LABEL:
-            self._logger.info(
-                'Transforming shapely wtk polygon format to pascal voc.\n')
             self._parse_label()
         else:
             self._logger.warning(

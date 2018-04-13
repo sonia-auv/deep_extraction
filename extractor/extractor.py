@@ -31,6 +31,27 @@ class Extractor:
     @property
     def _detection_image_dir(self):
         return os.path.join(self._detection_dir, 'dataset', 'images')
+    
+    @property
+    def _label_map_src(self):
+        return os.path.join(self._output_dir, 'label_map.pbtxt')
+    
+    @property
+    def _label_map_dest(self):
+        return os.path.join(self._detection_annotation_dir, 'label_map.pbtxt')
+    
+    @property
+    def _train_val_src(self):
+        return os.path.join(self._output_dir, 'trainval.txt')
+    
+    @property
+    def _train_val_dest(self):
+        return os.path.join(self._detection_annotation_dir, 'trainval.txt')
+
+    @property
+    def _annotation_dir_dest(self):
+        return os.path.join(self._detection_annotation_dir, 'pascal_voc')
+
 
     def _prepare_output_path(self):
         """ Prepare output folder to receive images and bounding box data. """
@@ -65,38 +86,31 @@ class Extractor:
 
         json_parser = JSONParser(logger, **config)
 
+  
     def _copy_annotation_to_deep_detection(self):
-        # TODO:Refactor
         """ Copy annotation xml and trainval files and labelmap.pbtxt to deep_detection."""
-        label_map_src = os.path.join(self._output_dir, 'label_map.pbtxt')
-        label_map_dest = os.path.join(self._detection_annotation_dir, 'label_map.pbtxt')
-
-        train_val_src = os.path.join(self._output_dir, 'trainval.txt')
-        train_val_dest = os.path.join(self._detection_annotation_dir, 'trainval.txt')
-
+   
         annotations_files = glob(os.path.join(self._annotation_dir, 'pascal_voc', '*.xml'))
 
         if os.path.exists(self._detection_dir):
             if os.path.exists(os.path.join(self._detection_annotation_dir)):
-                shutil.copyfile(label_map_src, label_map_dest)
-                shutil.copyfile(train_val_src, train_val_dest)
+                shutil.copyfile(self._label_map_src, self._label_map_dest)
+                shutil.copyfile(self._train_val_src, self._train_val_dest)
 
-                annotation_dir_dest = os.path.join(self._detection_annotation_dir, 'pascal_voc')
-
-                if os.path.exists(annotation_dir_dest):
-                    filelist = glob(os.path.join(os.path.join(annotation_dir_dest, '*.xml')))
+                if os.path.exists(self._annotation_dir_dest):
+                    filelist = glob(os.path.join(self._annotation_dir_dest, '*.xml'))
                     for f in filelist:
                         os.remove(f)
 
                     for annotation_file in annotations_files:
                         file_name = os.path.basename(annotation_file)
-                        new_annotation_file = os.path.join(annotation_dir_dest, file_name)
-                        self._logger.info('Copying annotation file {} to {}'.format(
-                            annotation_file, new_annotation_file))
+                        new_annotation_file = os.path.join(self._annotation_dir_dest, file_name)
                         shutil.copyfile(annotation_file, new_annotation_file)
 
+                        self._logger.info('Copied annotation file {} to {}'.format(
+                            annotation_file, new_annotation_file))
+
     def _copy_resized_images_to_deep_detection(self):
-        # TODO:Refactor
         """ Copy resized images to deep_detection. """
         resized_image_files = glob(os.path.join(self._resized_dir, '*.jpg'))
 

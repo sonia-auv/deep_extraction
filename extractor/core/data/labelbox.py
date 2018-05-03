@@ -121,7 +121,7 @@ class LabeledImagePascalVOC:
 
         if not os.path.exists(self._resized_image_path):
             cv2.imwrite(self._resized_image_path, scaled_img)
-            self._logger.info('Resized image at {}.jpg'.format(
+            self._logger.info('Resized image at {}'.format(
                 self._resized_image_path))
         else:
             self._logger.warn('WARN: Skipping file resizing since it already exist @ {}\n'.format(

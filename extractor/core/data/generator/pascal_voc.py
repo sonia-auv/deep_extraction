@@ -76,9 +76,26 @@ class PascalVOCGenerator(AbstractGenerator):
                 xy_coords.extend([x, y])
 
             label = label.lower()
-            self._debug_bounding_box(xy_coords, label)
-
             self.label_names.add(label)
+
+            # CHANGES
+
+            #top_l = (xy_coords[0], xy_coords[1])
+            #bottom_l = (xy_coords[2], xy_coords[3])
+            #bottom_r = (xy_coords[4], xy_coords[5])
+            #top_r = (xy_coords[6], xy_coords[7])
+
+            x_min = min(xy_coords[::2])
+            x_max = max(xy_coords[::2])
+            y_min = min(xy_coords[1::2])
+            y_max = max(xy_coords[1::2])
+
+            xy_coords.clear()
+            xy_coords = [x_min, y_max, x_min, y_min, x_max, y_min, x_max, y_max]
+
+            self._debug_bounding_box(xy_coords, label)
+            ####
+
             xml_writer.addObject(name=label, xy_coords=xy_coords)
 
         self._check_or_create_annotation_dirs()

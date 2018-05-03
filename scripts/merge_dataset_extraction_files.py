@@ -29,8 +29,8 @@ def parse_args():
     args_parser.add_argument('-c', '--img_count_per_file',
                              default=300,
                              dest='img_count_per_file',
-                             type=int
-                             required=False
+                             type=int,
+                             required=False,
                              help='Number of images to be randomly kept from a given file in the list')
 
     return args_parser.parse_args()

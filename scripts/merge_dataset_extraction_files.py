@@ -27,8 +27,7 @@ def parse_args():
                              help='Path to json file containing all labeling data from labelbox.io')
 
     args_parser.add_argument('-s', '--sample_per_file',
-                             default=300,
-                             dest='sample_per_file',
+                             dest='sample_per_file'
                              type=int,
                              required=False,
                              help='Number of images to be randomly kept from a given file in the list')
@@ -52,7 +51,7 @@ def list_json_files(folder_path):
     return file_list
 
 
-def extract_json_from_files(json_files, sample_count):
+def extract_json_from_files(json_files, sample_count=0):
     """
     Extract labelbox bounding box data from labelbox.io extract files.
 
@@ -62,14 +61,14 @@ def extract_json_from_files(json_files, sample_count):
     Returns:
         [list(str)] - - [list containing all extracted json data]
     """
-    json_data = [] 
+    json_data = []
     for file_ in json_files:
         with open(file_, 'r') as json_file:
             data = json.load(json_file)
-            data = random.sample(data, sample_count)
-            json_data.extend(data) 
+            if sample_count != 0:
+                data = random.sample(data, sample_count)
+            json_data.extend(data)
 
-    print(len(json_data))
     return json_data
 
 

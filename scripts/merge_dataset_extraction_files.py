@@ -27,7 +27,7 @@ def parse_args():
                              help='Path to json file containing all labeling data from labelbox.io')
 
     args_parser.add_argument('-s', '--sample_per_file',
-                             dest='sample_per_file'
+                             dest='sample_per_file',
                              type=int,
                              required=False,
                              help='Number of images to be randomly kept from a given file in the list')

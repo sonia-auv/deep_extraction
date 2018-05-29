@@ -6,17 +6,17 @@ import os
 from glob import glob
 from datetime import datetime
 
+
 class GoogleCloudStorageLinkGenerator:
     """ A basic utility class to generate links to google cloud storage imported files """
-    
-    BASE_NAME = 'https://storage.googleapis.com/robosub-2018/dataset/dice/'
+
+    BASE_NAME = 'https://storage.googleapis.com/robosub-2018/dataset/'
 
     def __init__(self, image_dir, output_dir, output_name):
         self.image_dir = image_dir
         self.output_dir = output_dir
         self.output_name = output_name
         self.execute()
-
 
     def check_or_create_output_dir(self):
         """ Check if output dir exist or not and if not create it. """
@@ -32,17 +32,16 @@ class GoogleCloudStorageLinkGenerator:
             sub_dir_content = glob(sub_dir + '*')
             for image_path in sub_dir_content:
                 splited = image_path.rsplit('/', 2)
-                
+
                 url = os.path.join(self.BASE_NAME, splited[1], splited[2])
                 urls.append(url)
 
             base_name = os.path.basename(os.path.normpath(sub_dir))
             self.create_csv(urls, base_name)
 
-    
     def create_csv(self, urls, sub_dir):
         """ Generate a csv file. """
-        file_name = 'link_to_gcc_{}_{}.csv'.format(sub_dir,datetime.now())
+        file_name = 'link_to_gcc_{}_{}.csv'.format(sub_dir, datetime.now())
         output_file = os.path.join(self.output_dir,  file_name)
         with open(output_file, 'w') as csv_file:
             csv_writer = csv.writer(csv_file, delimiter=',', quoting=csv.QUOTE_ALL)
@@ -55,34 +54,32 @@ class GoogleCloudStorageLinkGenerator:
         self.list_subdir_file_content_and_create_csv()
 
 
-
 def parse_args():
-        parser = argparse.ArgumentParser(description='Google cloud storage link csv generator.')
+    parser = argparse.ArgumentParser(description='Google cloud storage link csv generator.')
 
-        parser.add_argument('-i', '--image_dir', 
-                            dest='image_dir',
-                            required=True,
-                            type=str,
-                            help='Directory containing image for which we want to generate link')
-        parser.add_argument('-o', '--output_dir',
-                            dest='output_dir',
-                            required=True,
-                            type=str,
-                            help='Directory where to create the csv file')
-        parser.add_argument('-n', '--output_name',
-                            dest='output_name',
-                            required=True,
-                            type=str,
-                            help='CSV output file name')
+    parser.add_argument('-i', '--image_dir',
+                        dest='image_dir',
+                        required=True,
+                        type=str,
+                        help='Directory containing image for which we want to generate link')
+    parser.add_argument('-o', '--output_dir',
+                        dest='output_dir',
+                        required=True,
+                        type=str,
+                        help='Directory where to create the csv file')
+    parser.add_argument('-n', '--output_name',
+                        dest='output_name',
+                        required=True,
+                        type=str,
+                        help='CSV output file name')
 
-        return parser.parse_args()
+    return parser.parse_args()
 
 
 if __name__ == '__main__':
-    
+
     parsed_args = parse_args()
 
-    link_generator = GoogleCloudStorageLinkGenerator(parsed_args.image_dir, 
-                                                     parsed_args.output_dir, 
+    link_generator = GoogleCloudStorageLinkGenerator(parsed_args.image_dir,
+                                                     parsed_args.output_dir,
                                                      parsed_args.output_name)
-

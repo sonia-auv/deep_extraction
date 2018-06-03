@@ -52,7 +52,7 @@ def list_json_files(folder_path):
     return file_list
 
 
-def extract_json_from_files(json_files, sample_count=0):
+def extract_json_from_files(json_files, sample_count):
     """
     Extract labelbox bounding box data from labelbox.io extract files.
 

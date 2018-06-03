@@ -45,11 +45,12 @@ class JSONParser:
             entry['Required Image Height'] = self._required_img_height
             entry['Resized Image Dir'] = self._resized_dir
 
-            if entry['Labeled Data'] != ' ' or entry['Label'] != 'Skip':
+            # TODO : Must test bool(entry['Label'] )
+            if not entry['Labeled Data'] == '':
                 image = LabeledImagePascalVOC(logger, **entry)
                 labeled_imgs.append(image)
             else:
-                self.logger.warning("SKIPPED -- entry 'Labeled Data' or 'Label' == Skip")
+                self._logger.warning("SKIPPED -- entry 'Labeled Data' or 'Label' == Skip")
 
         self._generate_label_map(labeled_imgs)
         self._generate_file_map(labeled_imgs)

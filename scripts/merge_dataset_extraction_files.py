@@ -12,7 +12,7 @@ def parse_args():
     """
     args_parser = argparse.ArgumentParser()
 
-    args_parser.add_argument('-i', '--json_files_folder',
+    args_parser.add_argument('-j', '--json_files_folder',
                              default=None,
                              dest='json_files_folder',
                              type=str,
@@ -66,9 +66,10 @@ def extract_json_from_files(json_files, sample_count):
     for file_ in json_files:
         with open(file_, 'r') as json_file:
             data = json.load(json_file)
-            if sample_count != 0:
-                data = random.sample(data, sample_count)
-            json_data.extend(data)
+            random_data = random.sample(data, sample_count)
+
+            json_data.extend(random_data)
+            print('json_data length {}'.format(len(json_data)))
 
     return json_data
 

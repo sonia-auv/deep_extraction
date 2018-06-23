@@ -17,9 +17,9 @@ class Main():
 
         args_parser = argparse.ArgumentParser()
 
-        args_parser.add_argument('-f', '--json_file_dir',
+        args_parser.add_argument('-f', '--json_file',
                                  default=None,
-                                 dest='json_file_dir',
+                                 dest='json_file',
                                  type=str,
                                  required=True,
                                  help='Path to json file containing label data')
@@ -59,7 +59,7 @@ class Main():
         parsed_args = self.parse_args()
 
         extractor = Extractor(logger=create_logger,
-                              json_file=parsed_args.json_file_dir,
+                              json_file=parsed_args.json_file,
                               output_dir=parsed_args.output_dir,
                               detection_dir=parsed_args.detection_dir,
                               required_img_width=parsed_args.required_img_width,

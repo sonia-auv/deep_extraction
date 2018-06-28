@@ -75,11 +75,11 @@ class LabeledImagePascalVOC:
 
         self._aspect_ratio = float(width)/height
 
-        scaled_height = 300
-        scaled_width = 300
+        scaled_height = self._required_img_height
+        scaled_width = self._required_img_width
 
         # interpolation method
-        if height > self._required_img_height or width > self._required_img_width:  # shrinking image
+        if height > scaled_height or width > scaled_width:  # shrinking image
             interp = cv2.INTER_AREA
         else:  # stretching image
             interp = cv2.INTER_CUBIC

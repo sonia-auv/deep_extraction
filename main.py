@@ -32,21 +32,19 @@ class Main():
                                  help='Path to destination directory where images and bounding box are created')
 
         args_parser.add_argument('-d', '--detection_dir',
-                                 default=None,
+                                 default='',
                                  dest='detection_dir',
                                  type=str,
                                  required=False,
                                  help='Path to base base deep_detection directory')
 
         args_parser.add_argument('-iw', '--required_img_width',
-                                 default=300,
                                  dest='required_img_width',
                                  type=int,
                                  required=False,
                                  help='Model required image width')
 
         args_parser.add_argument('-ih', '--required_img_height',
-                                 default=300,
                                  dest='required_img_height',
                                  type=int,
                                  required=False,

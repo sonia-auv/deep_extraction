@@ -31,19 +31,19 @@ class Extractor:
     @property
     def _detection_image_dir(self):
         return os.path.join(self._detection_dir, 'dataset', 'images')
-    
+
     @property
     def _label_map_src(self):
         return os.path.join(self._output_dir, 'label_map.pbtxt')
-    
+
     @property
     def _label_map_dest(self):
         return os.path.join(self._detection_annotation_dir, 'label_map.pbtxt')
-    
+
     @property
     def _train_val_src(self):
         return os.path.join(self._output_dir, 'trainval.txt')
-    
+
     @property
     def _train_val_dest(self):
         return os.path.join(self._detection_annotation_dir, 'trainval.txt')
@@ -86,12 +86,12 @@ class Extractor:
 
         json_parser = JSONParser(logger, **config)
 
-  
+
     def _copy_annotation_to_deep_detection(self):
         """ Copy annotation xml and trainval files and labelmap.pbtxt to deep_detection."""
-   
-        annotations_files = glob(os.path.join(self._annotation_dir, 'pascal_voc', '*.xml'))
 
+        annotations_files = glob(os.path.join(self._annotation_dir, 'pascal_voc', '*.xml'))
+        
         if os.path.exists(self._detection_dir):
             if os.path.exists(os.path.join(self._detection_annotation_dir)):
                 shutil.copyfile(self._label_map_src, self._label_map_dest)

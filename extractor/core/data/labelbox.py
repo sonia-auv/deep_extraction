@@ -34,8 +34,13 @@ class LabeledImagePascalVOC:
         self._file_ext = '.' + \
             self._source_img_url.split("/")[-1].split('.')[1]
         self._download_image(kwargs['Label'])
-        self._resize_image(self._image_file_path)
-        self._generate_pascal_voc_file(logger, kwargs['Label'], apply_reduction=True, debug=True)
+        if self._required_img_height and self._required_img_width:
+            self._resize_image(self._image_file_path)
+            self._generate_pascal_voc_file(
+                logger, kwargs['Label'], apply_reduction=True, debug=True)
+        else:
+            self._generate_pascal_voc_file(
+                logger, kwargs['Label'], apply_reduction=False, debug=True)
 
     def _download_image(self, json_labels):
         """ Download image from provided link (Cloud link)."""
